@@ -55,7 +55,7 @@ const userDocumentSchema = new mongoose.Schema(
     },
     parentDocument: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "UserDocument",
+      ref: "Documents",
     },
 
     isDefault: {
@@ -65,19 +65,12 @@ const userDocumentSchema = new mongoose.Schema(
 
     lastUsedAt: Date,
 
-    viewCount: {
-      type: Number,
-      default: 0,
-    },
-
-    lastViewedAt: Date,
-
     isArchived: {
-      type: Boolean,7777777
+      type: Boolean,
       default: false,
     },
   },
   { timestamps: true },
 );
 
-module.export = mongoose.model("UserDocument", userDocumentSchema);
+module.exports = mongoose.model("Documents", userDocumentSchema);
