@@ -8,7 +8,7 @@ const userProfileSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-
+    
     // Basic Info
     firstName: {
       type: String,
@@ -89,4 +89,6 @@ const userProfileSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export default mongoose.model("UserProfile", userProfileSchema);
+const UserProfile = mongoose.models.Job || mongoose.model("UserProfile", userProfileSchema);
+
+export default UserProfile;

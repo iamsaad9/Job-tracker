@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
  * This ensures TypeScript knows exactly what properties are in the token.
  */
 interface MyJwtPayload {
-  userId: string;
+  user: string;
   role?: string;
 }
 
@@ -34,7 +34,7 @@ export async function getServerSession(): Promise<MyJwtPayload | null> {
 
     // Return the decoded data with strict typing
     return {
-      userId: decoded.userId,
+      user: decoded.user,
       role: decoded.role || "user",
     };
   } catch (error) {

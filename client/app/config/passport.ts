@@ -2,11 +2,11 @@ import passport from "passport";
 import { Strategy as GoogleStrategy, Profile, VerifyCallback } from "passport-google-oauth20";
 import { Strategy as LocalStrategy } from "passport-local";
 import bcrypt from "bcryptjs";
-import User from "../../models/User"; // Path alias @/models/User if configured
+import User from "../../models/User"; // Path alias @/app/models/User if configured
 
 /**
  * 1. Define the User interface for Passport 
- * (Ideally, import this from your @/models/User file)
+ * (Ideally, import this from your @/app/models/User file)
  */
 interface IUser {
   _id: string;

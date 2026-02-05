@@ -1,22 +1,17 @@
 import { NextResponse, NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "@/models/User";
-import connectDB from "@/lib/mongodb";
+import User from "@/app/models/User";
+import connectDB from "@/app/config/dbConfig";
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
     
-    // 1. Destructure with types
-    const { email, password } = await req.json();
+  const { email, password } = await req.json();
+const cleanEmail = email.trim().toLowerCase();
+const user = await User.findOne({ email: cleanEmail });
 
-    // 2. Find user
-    // If you haven't typed your model yet, 'user' might be 'any' or Document
-    const user = await User.findOne({ email });
-
-    // 3. Validation logic
-    // We use optional chaining or type guards to ensure password exists
     if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json(
         { message: "Invalid credentials", success: false },
@@ -24,13 +19,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. JWT Signing
-    // ! tells TS process.env.SECRET_KEY is defined
-    const token = jwt.sign(
-      { userId: user._id }, 
-      process.env.SECRET_KEY!, 
-      { expiresIn: "1d" }
-    );
+ const token = jwt.sign(
+  { userId: user._id.toString() }, // Ensure it's a string
+  process.env.SECRET_KEY!, 
+  { expiresIn: "1d" }
+);
 
     const response = NextResponse.json({ 
       message: "Logged in successfully", 
@@ -42,7 +35,6 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // 5. Secure Cookie Setting
     response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

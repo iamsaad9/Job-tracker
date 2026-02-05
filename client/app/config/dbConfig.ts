@@ -13,7 +13,7 @@ if (!MONGO_URI) {
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
-}
+} 
 
 // Add our cache to the Node.js global type
 declare global {

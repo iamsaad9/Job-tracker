@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import UserProfile from "@/models/UserProfile";
-import User from "@/models/User";
+import connectDB from "@/app/config/dbConfig";
+import UserProfile from "@/app/models/UserProfile";
+import User from "@/app/models/User";
 import { Document, Types } from "mongoose";
 
 // 1. Define the User interface for the lookup

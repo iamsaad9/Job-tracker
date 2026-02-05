@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
+  console.log("Middleware checking path:", req.nextUrl.pathname);
   const token = req.cookies.get("token")?.value;
+  console.log("Token found:", !!token);
 
   const isAuthRoute =
     req.nextUrl.pathname.startsWith("/login") ||

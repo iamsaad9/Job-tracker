@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import UserProfile from "@/models/UserProfile";
-import { getServerSession } from "@/lib/auth";
+import connectDB from "@/app/config/dbConfig";
+import UserProfile from "@/app/models/UserProfile";
+import { getServerSession } from "@/app/lib/auth";
 
 // Define the Session shape
 interface UserSession {

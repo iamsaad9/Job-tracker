@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import UserProfile from "@/models/UserProfile";
-import { getServerSession } from "@/lib/auth";
+import connectDB from "@/app/config/dbConfig";
+import UserProfile from "@/app/models/UserProfile";
+import { getServerSession } from "@/app/lib/auth";
 
 // Define the Session shape
 interface UserSession {
-  userId: string;
+  user: string;
 }
 
 // Define the Profile shape (matches your Mongoose schema)
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     // Populate brings in fields from the 'User' collection
     const profile = await UserProfile.findOne({
-      user: session.userId,
+      user: session.user,
     }).populate("user", ["username", "email"]);
 
     if (!profile) {
@@ -70,11 +70,11 @@ export async function POST(req: NextRequest) {
     // Explicitly link the user ID from the session, not the client-side body
     const profileFields: Partial<IProfile> = { 
       ...body, 
-      user: session.userId 
+      user: session.user 
     };
 
     const profile = await UserProfile.findOneAndUpdate(
-      { user: session.userId },
+      { user: session.user },
       { $set: profileFields },
       { 
         new: true, 

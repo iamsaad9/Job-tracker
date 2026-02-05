@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage, bucketId } from "@/services/appwrite";
-import Documents from "@/models/Documents";
-import connectDB from "@/lib/mongodb";
-import { getServerSession } from "@/lib/auth";
+import { storage, bucketId } from "@/app/services/appwrite";
+import Documents from "@/app/models/Documents";
+import connectDB from "@/app/config/dbConfig";
+import { getServerSession } from "@/app/lib/auth";
 
 interface RouteParams {
   params: Promise<{ id: string }>;

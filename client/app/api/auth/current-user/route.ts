@@ -11,11 +11,10 @@ interface JwtPayload {
   role?: string;
 }
 
-export async function POST(req: NextRequest) {
+export async function GET() {
   try {
     await connectDB();
     
-    // 2. Accessing cookies (Note: in Next.js 15+, cookies() is async)
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
 
@@ -27,38 +26,17 @@ export async function POST(req: NextRequest) {
     // Use ! to tell TS that SECRET_KEY is definitely defined in .env
     const decoded = jwt.verify(token, process.env.SECRET_KEY!) as unknown as JwtPayload;
     
-    const { password, newPassword } = await req.json();
+  console.log("Decoded Token:", decoded); // <--- Check this in your terminal!
 
+  const user = await User.findById(decoded.userId).select("-password");
+  console.log("Database Result:", user);
     // 4. Fetch user
-    const user = await User.findById(decoded.userId).select("+password");
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // 5. OAuth Check (Security)
-    if (!user.password) {
-      return NextResponse.json({
-        success: false,
-        message: "Password change not available for OAuth users",
-      }, { status: 400 });
-    }
-
-    // 6. Validate old password
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      return NextResponse.json({ 
-        success: false, 
-        message: "Invalid password" 
-      }, { status: 401 });
-    }
-
-    // 7. Hash and Save
-    user.password = await bcrypt.hash(newPassword, 10);
-    await user.save();
-
-    return NextResponse.json({ success: true, message: "Changed" });
-
+   return NextResponse.json({ user: user });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(

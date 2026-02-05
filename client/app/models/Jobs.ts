@@ -5,6 +5,11 @@ const jobSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+ user: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User", 
+  required: true,
+},
   company: {
     type: String,
     required: true,
@@ -40,4 +45,6 @@ const jobSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model("Job", jobSchema);
+const Job = mongoose.models.Job || mongoose.model("Job", jobSchema);
+
+export default Job;

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ID } from "node-appwrite";
-import { storage, bucketId } from "@/services/appwrite";
-import Documents from "@/models/Documents";
-import connectDB from "@/lib/mongodb";
-import { getServerSession } from "@/lib/auth";
+import { storage, bucketId } from "@/app/services/appwrite";
+import Documents from "@/app/models/Documents";
+import connectDB from "@/app/config/dbConfig";
+import { getServerSession } from "@/app/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // Step A: Handle Default Logic
     if (isDefault) {
       await Documents.updateMunknown(
-        { user: session.userId, type: type },
+        { user: session.user, type: type },
         { isDefault: false }
       );
     }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Step C: Save to MongoDB
     const newDoc = await Documents.create({
-      user: session.userId,
+      user: session.user,
       type,
       title,
       description,
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("type");
 
     // 2. Define a typed query object
-    const query: unknown = { user: session.userId, isArchived: false };
+    const query: unknown = { user: session.user, isArchived: false };
     if (type) query.type = type;
 
     const documents = await Documents.find(query).sort({ createdAt: -1 });

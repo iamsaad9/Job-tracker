@@ -8,7 +8,7 @@ const userDocumentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-
+ 
     type: {
       type: String,
       enum: ["cv", "cover_letter", "portfolio", "certificate"],
@@ -73,4 +73,6 @@ const userDocumentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export default mongoose.model("Documents", userDocumentSchema);
+const Documents = mongoose.models.Job || mongoose.model("Documents", userDocumentSchema);
+
+export default Documents;

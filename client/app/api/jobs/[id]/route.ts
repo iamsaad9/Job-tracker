@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Job from "@/models/Jobs";
-import Documents from "@/models/Documents";
-import { getServerSession } from "@/lib/auth";
+import connectDB from "@/app/config/dbConfig";
+import Job from "@/app/models/Jobs";
+import Documents from "@/app/models/Documents";
+import { getServerSession } from "@/app/lib/auth";
 
 // Define the Session shape based on what your JWT contains
 interface UserSession {
@@ -58,6 +58,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
     const { id } = await params;
     const body: UpdateJobBody = await req.json();
+    console.log("body: ",body);
 
     const updatedJob = await Job.findOneAndUpdate(
       { _id: id, user: session.userId },
