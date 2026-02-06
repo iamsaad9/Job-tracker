@@ -20,6 +20,7 @@ import {
   Tabs,
   Tab,
 } from "@heroui/react";
+import { useUser } from "@/app/hooks/useUser";
 
 interface Experience {
   _id?: string;
@@ -51,8 +52,7 @@ interface Resume {
 interface UserProfile {
   _id: string;
   user: string;
-  firstName?: string;
-  lastName?: string;
+  name?: string;
   headline?: string;
   summary?: string;
   email?: string;
@@ -72,7 +72,7 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const { user } = useUser();
   // Modal states
   const basicInfoModal = useDisclosure();
   const experienceModal = useDisclosure();
@@ -81,8 +81,7 @@ const ProfilePage: React.FC = () => {
 
   // Form states
   const [basicInfoForm, setBasicInfoForm] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     headline: "",
     summary: "",
     email: "",
@@ -123,15 +122,14 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/profile");
+      const response = await fetch(`/api/profile/${user?._id}`);
       const json = await response.json();
 
       if (response.ok && json.success) {
         setProfile(json.data);
         // Populate basic info form
         setBasicInfoForm({
-          firstName: json.data.firstName || "",
-          lastName: json.data.lastName || "",
+          name: json.data.name || "",
           headline: json.data.headline || "",
           summary: json.data.summary || "",
           email: json.data.email || "",
@@ -156,7 +154,7 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/profile", {
+      const response = await fetch(`/api/profile/${user?._id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(basicInfoForm),
@@ -182,7 +180,7 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/profile/experience", {
+      const response = await fetch(`/api/profile/${profile?._id}/experiences`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -223,7 +221,7 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/profile/education", {
+      const response = await fetch(`/api/profile/${profile?._id}/educations`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -273,7 +271,7 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/profile/skills", {
+      const response = await fetch(`/api/profile/${profile?._id}/skills`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skills: skillsArray }),
@@ -338,10 +336,7 @@ const ProfilePage: React.FC = () => {
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
               <Avatar
                 className="w-24 h-24 md:w-32 md:h-32"
-                name={
-                  `${profile.firstName || ""} ${profile.lastName || ""}`.trim() ||
-                  "U"
-                }
+                name={`${profile.name || ""}`.trim() || "U"}
                 classNames={{
                   base: "bg-primary text-white text-3xl",
                 }}
@@ -349,9 +344,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-                    {profile.firstName && profile.lastName
-                      ? `${profile.firstName} ${profile.lastName}`
-                      : "Your Name"}
+                    {profile.name}
                   </h1>
                   <Button
                     color="primary"
@@ -649,36 +642,20 @@ const ProfilePage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="First Name"
-                  value={basicInfoForm.firstName}
-                  onChange={(e) =>
-                    setBasicInfoForm({
-                      ...basicInfoForm,
-                      firstName: e.target.value,
-                    })
-                  }
-                  classNames={{
-                    label: "text-foreground",
-                    input: "text-foreground",
-                  }}
-                />
-                <Input
-                  label="Last Name"
-                  value={basicInfoForm.lastName}
-                  onChange={(e) =>
-                    setBasicInfoForm({
-                      ...basicInfoForm,
-                      lastName: e.target.value,
-                    })
-                  }
-                  classNames={{
-                    label: "text-foreground",
-                    input: "text-foreground",
-                  }}
-                />
-              </div>
+              <Input
+                label="Name"
+                value={basicInfoForm.name}
+                onChange={(e) =>
+                  setBasicInfoForm({
+                    ...basicInfoForm,
+                    name: e.target.value,
+                  })
+                }
+                classNames={{
+                  label: "text-foreground",
+                  input: "text-foreground",
+                }}
+              />
 
               <Input
                 label="Headline"

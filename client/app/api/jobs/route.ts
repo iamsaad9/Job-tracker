@@ -5,7 +5,7 @@ import { getServerSession } from "@/app/lib/auth";
 
 // Define the Session shape
 interface UserSession {
-  user: string;
+  userId: string;
   role?: string;
 }
 
@@ -23,12 +23,12 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
     
-    const session: UserSession | null = await getServerSession();
+    const session = await getServerSession() as UserSession | null;
     if (!session) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const jobs = await Job.find({ user: session.user }).sort({
+    const jobs = await Job.find({ user: session.userId }).sort({
       applicationDate: -1,
     });
 
@@ -47,9 +47,13 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
     
-    const session: UserSession | null = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const session = await getServerSession() as UserSession | null;
+
+    if (!session || !session.userId) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     // Explicitly type the parsed JSON
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     const existingJob = await Job.findOne({
-      user: session.user,
+      user: session.userId,
       jobUrl: body.jobUrl,
     });
 
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     const newJob = await Job.create({
       ...body,
-      user: session.user,
+      user: session.userId,
     });
 
     return NextResponse.json({ success: true, data: newJob }, { status: 201 });

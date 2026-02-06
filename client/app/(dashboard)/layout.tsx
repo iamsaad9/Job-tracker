@@ -5,6 +5,7 @@ import { IconHome } from "@tabler/icons-react";
 import { User, Plus, ChartArea, ClipboardList } from "lucide-react";
 import { ReactNode } from "react";
 import Header from "../components/ui/NavBar";
+import { UserProvider } from "../context/userContext";
 
 type Props = {
   children: ReactNode;
@@ -39,8 +40,10 @@ export default function DashboardLayout({ children }: Props) {
       </Sidebar> */}
 
       <div className="flex-1 h-full overflow-y-auto ">
-        <Header />
-        <div>{children}</div>
+        <UserProvider>
+          <Header />
+          <div>{children}</div>
+        </UserProvider>
       </div>
     </main>
   );

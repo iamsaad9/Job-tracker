@@ -7,8 +7,9 @@ import { getServerSession } from "@/app/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("UPLOADING DOCUMENTS")
     await connectDB();
-    const session = await getServerSession(); // Updated: getServerSession usually handles cookies internally in Next.js
+    const session = await getServerSession(); 
     
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,13 +18,14 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     
     // 1. Type casting for FormData values
+    const user = formData.get("user") as string | null;
     const file = formData.get("file") as File | null;
     const type = formData.get("type") as string | null;
     const title = formData.get("title") as string | null;
     const description = formData.get("description") as string | null;
     const isDefault = formData.get("isDefault") === "true";
 
-    if (!file || !type || !title) {
+    if (!user || !file || !type || !title) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -32,8 +34,8 @@ export async function POST(req: NextRequest) {
 
     // Step A: Handle Default Logic
     if (isDefault) {
-      await Documents.updateMunknown(
-        { user: session.user, type: type },
+      await Documents.updateMany(
+        { user: session.userId, type: type },
         { isDefault: false }
       );
     }
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     // Step C: Save to MongoDB
     const newDoc = await Documents.create({
-      user: session.user,
+      user,
       type,
       title,
       description,
@@ -60,6 +62,8 @@ export async function POST(req: NextRequest) {
         size: appwriteFile.sizeOriginal || file.size,
       },
     });
+
+    console.log("NEW DOC: ",newDoc);
 
     return NextResponse.json({ success: true, data: newDoc }, { status: 201 });
   } catch (err: unknown) {
@@ -84,7 +88,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("type");
 
     // 2. Define a typed query object
-    const query: unknown = { user: session.user, isArchived: false };
+    const query: unknown = { user: session.userId, isArchived: false };
     if (type) query.type = type;
 
     const documents = await Documents.find(query).sort({ createdAt: -1 });

@@ -1,44 +1,29 @@
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
-
-/**
- * 1. Define the shape of your JWT payload.
- * This ensures TypeScript knows exactly what properties are in the token.
- */
+// 1. Update the interface to match your login payload
 interface MyJwtPayload {
-  user: string;
+  userId: string; // Changed from 'user' to 'userId'
   role?: string;
 }
 
-/**
- * Helper to get the current user session from HTTP-only cookies.
- */
 export async function getServerSession(): Promise<MyJwtPayload | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
 
-    if (!token) {
-      return null;
-    }
+    if (!token) return null;
 
-    /**
-     * 2. Verify and Cast.
-     * We use 'as MyJwtPayload' so TS treats 'decoded' as our interface.
-     * We use '!' on SECRET_KEY to tell TS the environment variable is defined.
-     */
     const decoded = jwt.verify(
       token, 
       process.env.SECRET_KEY!
     ) as unknown as MyJwtPayload;
 
-    // Return the decoded data with strict typing
+    // 2. Map the decoded userId to the object you want to return
     return {
-      user: decoded.user,
+      userId: decoded.userId, // This matches what you signed in the POST route
       role: decoded.role || "user",
     };
   } catch (error) {
-    // 3. Handle error without 'any' or 'unknown' access
     if (error instanceof Error) {
       console.error("JWT Verification Error:", error.message);
     }

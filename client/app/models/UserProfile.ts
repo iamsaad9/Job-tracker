@@ -10,11 +10,7 @@ const userProfileSchema = new mongoose.Schema(
     },
     
     // Basic Info
-    firstName: {
-      type: String,
-      trim: true,
-    },
-    lastName: {
+    name: {
       type: String,
       trim: true,
     },
@@ -26,7 +22,6 @@ const userProfileSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-
     // Contact Info
     email: {
       type: String,
@@ -37,7 +32,6 @@ const userProfileSchema = new mongoose.Schema(
     website: String,
     linkedin: String,
     github: String,
-
     // Skills
     skills: [
       {
@@ -89,6 +83,6 @@ const userProfileSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const UserProfile = mongoose.models.Job || mongoose.model("UserProfile", userProfileSchema);
+const UserProfile = mongoose.models.UserProfile || mongoose.model("UserProfile", userProfileSchema);
 
 export default UserProfile;

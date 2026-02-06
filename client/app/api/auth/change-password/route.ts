@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     // Use ! to tell TS that SECRET_KEY is definitely defined in .env
     const decoded = jwt.verify(token, process.env.SECRET_KEY!) as unknown as JwtPayload;
     
-    const { password, newPassword } = await req.json();
+    const { currentPassword, newPassword } = await req.json();
 
     // 4. Fetch user
     const user = await User.findById(decoded.userId).select("+password");
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Validate old password
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
       return NextResponse.json({ 
         success: false, 

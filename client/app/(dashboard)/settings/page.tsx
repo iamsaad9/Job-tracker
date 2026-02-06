@@ -14,6 +14,7 @@ import {
   ModalFooter,
   useDisclosure,
 } from "@heroui/react";
+import { Eye, EyeOff } from "lucide-react";
 
 const SettingsPage: React.FC = () => {
   const [passwordForm, setPasswordForm] = useState({
@@ -175,11 +176,15 @@ const SettingsPage: React.FC = () => {
                 }}
                 endContent={
                   <button
-                    className="focus:outline-none"
+                    className="focus:outline-none self-center cursor-pointer"
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                   >
-                    {showCurrentPassword ? "🙈" : "👁️"}
+                    {showCurrentPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
                   </button>
                 }
               />
@@ -202,11 +207,11 @@ const SettingsPage: React.FC = () => {
                 }}
                 endContent={
                   <button
-                    className="focus:outline-none"
+                    className="focus:outline-none self-center cursor-pointer"
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                   >
-                    {showNewPassword ? "🙈" : "👁️"}
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 }
               />
@@ -228,11 +233,15 @@ const SettingsPage: React.FC = () => {
                 }}
                 endContent={
                   <button
-                    className="focus:outline-none"
+                    className="focus:outline-none self-center cursor-pointer"
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? "🙈" : "👁️"}
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
                   </button>
                 }
               />

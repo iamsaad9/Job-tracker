@@ -73,6 +73,6 @@ const userDocumentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const Documents = mongoose.models.Job || mongoose.model("Documents", userDocumentSchema);
+const Documents = mongoose.models.Documents || mongoose.model("Documents", userDocumentSchema);
 
 export default Documents;

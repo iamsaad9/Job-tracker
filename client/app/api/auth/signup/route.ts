@@ -1,53 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import User from "@/app/models/User";
 import connectDB from "@/app/config/dbConfig";
+import User from "@/app/models/User";
+import UserProfile from "@/app/models/UserProfile"; // Import the Profile model
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    
-    // 1. Destructure and type the incoming data
     const { name, email, password } = await req.json();
 
-    // 2. Simple validation check
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { message: "Missing required fields", success: false },
-        { status: 400 }
-      );
+    // 1. Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return NextResponse.json({ message: "User already exists" }, { status: 400 });
     }
 
-    // 3. Check for existing user
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return NextResponse.json(
-        { message: "User already exists", success: false },
-        { status: 400 }
-      );
-    }
-
-    // 4. Hash password
+    // 2. Hash password and create User
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // 5. Create and save user
-    const newUser = new User({ 
-      name, 
-      email, 
-      password: hashedPassword 
+    const newUser = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`,
     });
 
-    await newUser.save();
+    await UserProfile.create({
+      user: newUser._id, // Link to the new User's ID
+      name: `${name}`,
+      email:`${email}`
+    });
 
-    return NextResponse.json(
-      { message: "User created successfully", success: true },
-      { status: 201 }
-    );
-  }  catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 },
-    );
+    return NextResponse.json({ 
+      success: true, 
+      message: "User and Profile created successfully" 
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error("Signup Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import {
   Card,
   CardBody,
-  CardFooter,
   Button,
   Modal,
   ModalContent,
@@ -21,7 +20,10 @@ import {
   DropdownItem,
   useDisclosure,
   Spinner,
+  Divider,
 } from "@heroui/react";
+import { useUser } from "@/app/hooks/useUser";
+import { Download, Eye, Trash2, Star } from "lucide-react";
 
 interface DocumentFile {
   fileId: string;
@@ -75,7 +77,17 @@ const DocumentsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null,
+  );
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
+  const [viewingDocumentUrl, setViewingDocumentUrl] = useState<string | null>(
+    null,
+  );
 
+  const { user } = useUser();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [formData, setFormData] = useState({
@@ -121,12 +133,17 @@ const DocumentsPage: React.FC = () => {
       setError("Please select a file");
       return;
     }
+    if (!user) {
+      setError("You must be logged in to upload documents");
+      return;
+    }
 
     setUploading(true);
     setError(null);
 
     try {
       const formDataToSend = new FormData();
+      formDataToSend.append("user", user._id);
       formDataToSend.append("file", selectedFile);
       formDataToSend.append("type", formData.type);
       formDataToSend.append("title", formData.title);
@@ -166,17 +183,18 @@ const DocumentsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (docId: string) => {
-    if (!window.confirm("Are you sure you want to delete this document?"))
-      return;
+  const handleDelete = async () => {
+    if (!documentToDelete) return;
 
     try {
-      const response = await fetch(`/api/documents/${docId}`, {
+      const response = await fetch(`/api/documents/${documentToDelete}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setDocuments(documents.filter((doc) => doc._id !== docId));
+        setDocuments(documents.filter((doc) => doc._id !== documentToDelete));
+        setShowDeleteConfirm(false);
+        setDocumentToDelete(null);
       } else {
         const json = await response.json();
         setError(json?.error || "Failed to delete document");
@@ -187,24 +205,71 @@ const DocumentsPage: React.FC = () => {
     }
   };
 
-  const handleSetDefault = async (docId: string, type: string) => {
+  const openDeleteConfirm = (docId: string) => {
+    setDocumentToDelete(docId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleSetDefault = async (
+    docId: string,
+    type: string,
+    currentIsDefault: boolean,
+  ) => {
     try {
       const response = await fetch(`/api/documents/${docId}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isDefault: true }),
+        body: JSON.stringify({ isDefault: !currentIsDefault }),
       });
 
       if (response.ok) {
         setDocuments(
           documents.map((doc) => ({
             ...doc,
-            isDefault: doc._id === docId && doc.type === type,
+            isDefault: currentIsDefault
+              ? false
+              : doc._id === docId && doc.type === type,
           })),
         );
       }
     } catch (err: unknown) {
       console.error("Error setting default:", err);
+    }
+  };
+
+  const handleViewDocument = async (doc: Document) => {
+    setSelectedDocument(doc);
+    setShowViewModal(true);
+
+    // Fetch the document view URL
+    try {
+      const url = `/api/documents/${doc._id}/view`;
+      setViewingDocumentUrl(url);
+    } catch (err) {
+      console.error("Error viewing document:", err);
+    }
+  };
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      const response = await fetch(`/api/documents/${doc._id}/download`);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = doc.file.fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        setError("Failed to download document");
+      }
+    } catch (err: unknown) {
+      console.error("Error downloading document:", err);
+      setError("Failed to download document");
     }
   };
 
@@ -358,27 +423,43 @@ const DocumentsPage: React.FC = () => {
                               </DropdownTrigger>
                               <DropdownMenu aria-label="Document actions">
                                 <DropdownItem
+                                  key="view"
+                                  className="text-foreground"
+                                  startContent={<Eye size={16} />}
+                                  onPress={() => handleViewDocument(doc)}
+                                >
+                                  View Details
+                                </DropdownItem>
+                                <DropdownItem
                                   key="download"
                                   className="text-foreground"
+                                  startContent={<Download size={16} />}
+                                  onPress={() => handleDownload(doc)}
                                 >
                                   Download
                                 </DropdownItem>
-                                {!doc.isDefault ? (
-                                  <DropdownItem
-                                    key="default"
-                                    className="text-foreground"
-                                    onPress={() =>
-                                      handleSetDefault(doc._id, doc.type)
-                                    }
-                                  >
-                                    Set as Default
-                                  </DropdownItem>
-                                ) : null}
+                                <DropdownItem
+                                  key="default"
+                                  className="text-foreground"
+                                  startContent={<Star size={16} />}
+                                  onPress={() =>
+                                    handleSetDefault(
+                                      doc._id,
+                                      doc.type,
+                                      doc.isDefault,
+                                    )
+                                  }
+                                >
+                                  {doc.isDefault
+                                    ? "Remove as Default"
+                                    : "Set as Default"}
+                                </DropdownItem>
                                 <DropdownItem
                                   key="delete"
                                   className="text-danger"
                                   color="danger"
-                                  onPress={() => handleDelete(doc._id)}
+                                  startContent={<Trash2 size={16} />}
+                                  onPress={() => openDeleteConfirm(doc._id)}
                                 >
                                   Delete
                                 </DropdownItem>
@@ -448,7 +529,6 @@ const DocumentsPage: React.FC = () => {
                   <p className="text-danger text-sm">{error}</p>
                 </div>
               )}
-
               <div className="space-y-4">
                 <Select
                   label="Document Type"
@@ -456,20 +536,22 @@ const DocumentsPage: React.FC = () => {
                   selectedKeys={formData.type ? [formData.type] : []}
                   onSelectionChange={(keys) => {
                     const selectedValue = Array.from(keys)[0] as string;
-                    setFormData({ ...formData, type: selectedValue });
+                    if (selectedValue) {
+                      setFormData({ ...formData, type: selectedValue });
+                    }
                   }}
                   classNames={{
                     label: "text-foreground",
                     value: "text-foreground",
-                    trigger: "text-foreground", // Added trigger to ensure the displayed text is visible
+                    trigger: "text-foreground",
                   }}
                 >
                   {Object.entries(documentTypeConfig).map(([type, config]) => (
                     <SelectItem
                       key={type}
-                      textValue={config.label} // Crucial: gives the Select a string to show when selected
+                      textValue={config.label}
                       className="text-foreground"
-                      startContent={config.icon} // Cleaner way to show icons in HeroUI
+                      startContent={config.icon}
                     >
                       {config.label}
                     </SelectItem>
@@ -570,9 +652,192 @@ const DocumentsPage: React.FC = () => {
                 color="primary"
                 onPress={handleUpload}
                 isLoading={uploading}
-                isDisabled={!selectedFile || !formData.title || uploading}
+                isDisabled={!formData.title || uploading}
               >
                 {uploading ? "Uploading..." : "Upload"}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* View Document Modal */}
+        <Modal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedDocument(null);
+            setViewingDocumentUrl(null);
+          }}
+          size="5xl"
+          scrollBehavior="inside"
+          classNames={{
+            base: "bg-background border border-foreground/10",
+            header: "border-b border-foreground/10",
+            body: "py-6",
+          }}
+        >
+          <ModalContent>
+            <ModalHeader className="text-foreground text-xl font-semibold">
+              Document Details
+            </ModalHeader>
+            <ModalBody>
+              {selectedDocument && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground mb-1">
+                      {selectedDocument.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Chip
+                        variant="flat"
+                        color={documentTypeConfig[selectedDocument.type].color}
+                      >
+                        {documentTypeConfig[selectedDocument.type].icon}{" "}
+                        {documentTypeConfig[selectedDocument.type].label}
+                      </Chip>
+                      {selectedDocument.isDefault && (
+                        <Chip variant="flat" color="success">
+                          ⭐ Default
+                        </Chip>
+                      )}
+                    </div>
+                  </div>
+
+                  <Divider className="bg-foreground/10" />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-foreground/60 text-sm mb-1">
+                        File Name
+                      </p>
+                      <p className="text-foreground font-medium">
+                        {selectedDocument.file.fileName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-foreground/60 text-sm mb-1">
+                        File Size
+                      </p>
+                      <p className="text-foreground font-medium">
+                        {formatFileSize(selectedDocument.file.size)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-foreground/60 text-sm mb-1">
+                        Upload Date
+                      </p>
+                      <p className="text-foreground font-medium">
+                        {new Date(
+                          selectedDocument.createdAt,
+                        ).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-foreground/60 text-sm mb-1">Version</p>
+                      <p className="text-foreground font-medium">
+                        {selectedDocument.version}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedDocument.description && (
+                    <div>
+                      <p className="text-foreground/60 text-sm mb-2">
+                        Description
+                      </p>
+                      <p className="text-foreground bg-foreground/5 p-3 rounded-lg">
+                        {selectedDocument.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Document Preview */}
+                  {viewingDocumentUrl &&
+                    selectedDocument.file.mimeType === "application/pdf" && (
+                      <div>
+                        <p className="text-foreground/60 text-sm mb-2">
+                          Preview
+                        </p>
+                        <div className="w-full h-[600px] border border-foreground/10 rounded-lg overflow-hidden">
+                          <iframe
+                            src={viewingDocumentUrl}
+                            className="w-full h-full"
+                            title="Document Preview"
+                          />
+                        </div>
+                      </div>
+                    )}
+                </div>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={() => {
+                  setShowViewModal(false);
+                  setSelectedDocument(null);
+                  setViewingDocumentUrl(null);
+                }}
+                className="text-foreground"
+              >
+                Close
+              </Button>
+              {selectedDocument && (
+                <Button
+                  color="primary"
+                  startContent={<Download size={16} />}
+                  onPress={() => handleDownload(selectedDocument)}
+                >
+                  Download
+                </Button>
+              )}
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false);
+            setDocumentToDelete(null);
+          }}
+          size="md"
+          classNames={{
+            base: "bg-background border border-danger/30",
+            header: "border-b border-danger/20",
+            body: "py-6",
+            footer: "border-t border-danger/20",
+          }}
+        >
+          <ModalContent>
+            <ModalHeader className="text-danger text-xl font-semibold flex items-center gap-2">
+              <span className="text-2xl">⚠️</span>
+              Confirm Deletion
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-foreground">
+                Are you sure you want to delete this document? This action
+                cannot be undone.
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={() => {
+                  setShowDeleteConfirm(false);
+                  setDocumentToDelete(null);
+                }}
+                className="text-foreground"
+              >
+                Cancel
+              </Button>
+              <Button color="danger" onPress={handleDelete}>
+                Delete
               </Button>
             </ModalFooter>
           </ModalContent>
