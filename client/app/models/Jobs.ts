@@ -5,11 +5,11 @@ const jobSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
- user: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User", 
-  required: true,
-},
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   company: {
     type: String,
     required: true,
@@ -42,6 +42,30 @@ const jobSchema = new mongoose.Schema({
   notes: {
     type: String,
     required: false,
+  },
+  // Documents attached to this job application
+  documents: {
+    cv: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Documents",
+      required: false,
+    },
+    coverLetter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Documents",
+      required: false,
+    },
+    portfolio: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Documents",
+      required: false,
+    },
+    other: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Documents",
+      },
+    ],
   },
 });
 

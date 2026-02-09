@@ -3,11 +3,14 @@ import { storage, bucketId } from "@/app/services/appwrite";
 import Documents from "@/app/models/Documents";
 import connectDB from "@/app/config/dbConfig";
 import { getServerSession } from "@/app/lib/auth";
+import Job from "@/app/models/Jobs";
 
 // Define the shape of params
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
+
+
 
 // 3. Update Metadata
 export async function PUT(req: NextRequest, { params }: RouteParams) {
@@ -64,6 +67,26 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
+
+    const isUsed = await Job.findOne({
+      $or: [
+        { "documents.cv": id },
+        { "documents.coverLetter": id },
+        { "documents.portfolio": id },
+        { "documents.other": id }
+      ]
+    });
+
+    if (isUsed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "In Use", 
+          message: `This document is linked to your application at ${isUsed.company}. Remove it from the job first.` 
+        }, 
+        { status: 400 }
+      );
+    }
 
     const document = await Documents.findOne({ _id: id, user: session.userId });
     if (!document) {

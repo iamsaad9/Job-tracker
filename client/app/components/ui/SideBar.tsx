@@ -86,7 +86,7 @@ export const DesktopSidebar = ({
     <>
       <motion.div
         className={cn(
-          "relative px-4 py-4 hidden h-full md:flex md:flex-col justify-center items-start bg-gradient-to-br from-purple-600 to-blue-500 shrink-0",
+          "relative px-4 py-4 hidden h-full md:flex md:flex-col justify-center items-start bg-linear-to-br from-purple-600 to-blue-500 shrink-0",
           className,
         )}
         animate={{
@@ -137,7 +137,7 @@ export const SidebarLink = ({
               x: animate ? (open ? 0 : -10) : 0,
             }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="text-gray-200 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-200 whitespace-pre inline-block !p-0 !m-0"
+            className="text-gray-200 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-200 whitespace-pre inline-block p-0! m-0!"
           >
             {link.label}
           </motion.span>

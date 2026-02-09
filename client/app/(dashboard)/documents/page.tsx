@@ -23,7 +23,7 @@ import {
   Divider,
 } from "@heroui/react";
 import { useUser } from "@/app/hooks/useUser";
-import { Download, Eye, Trash2, Star } from "lucide-react";
+import { Download, Eye, Trash2, Star, Plus } from "lucide-react";
 
 interface DocumentFile {
   fileId: string;
@@ -82,11 +82,12 @@ const DocumentsPage: React.FC = () => {
   );
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
   const [viewingDocumentUrl, setViewingDocumentUrl] = useState<string | null>(
     null,
   );
-
+  const [usageError, setUsageError] = useState<string | null>(null);
   const { user } = useUser();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -185,7 +186,10 @@ const DocumentsPage: React.FC = () => {
 
   const handleDelete = async () => {
     if (!documentToDelete) return;
+    setError(null);
+    setUsageError(null);
 
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/documents/${documentToDelete}`, {
         method: "DELETE",
@@ -197,11 +201,19 @@ const DocumentsPage: React.FC = () => {
         setDocumentToDelete(null);
       } else {
         const json = await response.json();
-        setError(json?.error || "Failed to delete document");
+        if (json.error === "In Use") {
+          setDocumentToDelete(null);
+          setUsageError(json.message); // This will trigger your popup message
+        } else {
+          setDocumentToDelete(null);
+          setError(json?.error || "Failed to delete");
+        }
       }
     } catch (err: unknown) {
       console.error("Error deleting document:", err);
       setError("Failed to delete document");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -312,7 +324,7 @@ const DocumentsPage: React.FC = () => {
             onPress={onOpen}
             className="font-semibold"
           >
-            + Upload Document
+            <Plus size={18} /> Upload Document
           </Button>
         </div>
 
@@ -756,21 +768,38 @@ const DocumentsPage: React.FC = () => {
                   )}
 
                   {/* Document Preview */}
-                  {viewingDocumentUrl &&
-                    selectedDocument.file.mimeType === "application/pdf" && (
-                      <div>
-                        <p className="text-foreground/60 text-sm mb-2">
-                          Preview
-                        </p>
-                        <div className="w-full h-[600px] border border-foreground/10 rounded-lg overflow-hidden">
+                  {viewingDocumentUrl && (
+                    <div>
+                      <p className="text-foreground/60 text-sm mb-2">Preview</p>
+                      <div className="w-full min-h-75 max-h-150 border border-foreground/10 rounded-lg overflow-hidden flex items-center justify-center bg-foreground/5">
+                        {/* Handle PDFs */}
+                        {selectedDocument.file.mimeType ===
+                        "application/pdf" ? (
                           <iframe
                             src={viewingDocumentUrl}
-                            className="w-full h-full"
+                            className="w-full h-150"
                             title="Document Preview"
                           />
-                        </div>
+                        ) : selectedDocument.file.mimeType.startsWith(
+                            "image/",
+                          ) ? (
+                          /* Handle Images */
+                          <img
+                            src={viewingDocumentUrl}
+                            alt={selectedDocument.title}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : (
+                          /* Fallback for other file types */
+                          <div className="text-center p-8">
+                            <p className="text-foreground/40">
+                              Preview not available for this file type
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  )}
                 </div>
               )}
             </ModalBody>
@@ -836,8 +865,60 @@ const DocumentsPage: React.FC = () => {
               >
                 Cancel
               </Button>
-              <Button color="danger" onPress={handleDelete}>
+              <Button
+                isLoading={isDeleting}
+                color="danger"
+                onPress={handleDelete}
+              >
                 Delete
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Usage alert Modal */}
+        <Modal
+          isOpen={!!usageError}
+          onClose={() => {
+            setUsageError(null);
+            setShowDeleteConfirm(false);
+            setDocumentToDelete(null);
+          }}
+          size="md"
+          classNames={{
+            base: "bg-background border border-warning/30",
+            header: "border-b border-warning/20",
+            body: "py-6",
+            footer: "border-t border-warning/20",
+          }}
+        >
+          <ModalContent>
+            <ModalHeader className="text-warning text-xl font-semibold flex items-center gap-2">
+              <span className="text-2xl">🚫</span>
+              Action Restricted
+            </ModalHeader>
+            <ModalBody>
+              <div className="space-y-3">
+                <p className="text-foreground font-medium">
+                  This document cannot be deleted.
+                </p>
+                <p className="text-foreground-500 text-sm leading-relaxed">
+                  {usageError ||
+                    "It is currently linked to one or more job applications. Please remove this document from those applications before attempting to delete it."}
+                </p>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                color="warning"
+                variant="flat"
+                onPress={() => {
+                  setUsageError(null);
+                  setShowDeleteConfirm(false);
+                  setDocumentToDelete(null);
+                }}
+              >
+                Got it
               </Button>
             </ModalFooter>
           </ModalContent>

@@ -7,6 +7,7 @@ interface User {
   name: string;
   avatar: string;
   email: string;
+  provider: string;
 }
 
 export function useUser() {
@@ -28,6 +29,7 @@ export function useUser() {
 
         const data = await res.json();
         // Check if your API returns { user: {...} } or just {...}
+        console.log("Fetched user data:", data);
         setUser(data.user || data);
       } catch (err) {
         console.error("Auth check failed:", err);

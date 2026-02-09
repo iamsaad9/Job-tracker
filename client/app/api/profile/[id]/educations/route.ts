@@ -65,7 +65,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: profile });
 
-  } catch (error) {
+  } catch (error: unknown) {
     // 4. Handle error strictly using Type Guard
     const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
     
@@ -73,5 +73,54 @@ export async function PUT(req: NextRequest) {
       { success: false, error: errorMessage },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    await connectDB();
+    const session = await getServerSession();
+    if (!session) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json();
+    const { educationId, ...updateData } = body; // Extract the ID
+
+    if (!educationId) {
+      return NextResponse.json({ success: false, message: "Education ID required" }, { status: 400 });
+    }
+
+    const profile = await UserProfile.findOneAndUpdate(
+      { 
+        user: session.userId, 
+        "education._id": educationId 
+      },
+      { 
+        $set: { "education.$": { ...updateData, _id: educationId } } 
+      },
+      { new: true, runValidators: true }
+    );
+
+    return NextResponse.json({ success: true, data: profile });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Error" }, { status: 500 });
+  }
+}
+
+// 3. DELETE SPECIFIC EDUCATION
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const session = await getServerSession();
+    const { educationId } = await req.json();
+
+    const profile = await UserProfile.findOneAndUpdate(
+      { user: session?.userId },
+      { $pull: { education: { _id: educationId } } },
+      { new: true }
+    );
+
+    return NextResponse.json({ success: true, data: profile });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

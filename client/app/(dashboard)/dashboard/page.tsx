@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 
 import {
   PlusIcon,
-  Trash,
+  Trash2,
   TrendingUp,
   Calendar,
   Target,
@@ -13,6 +13,7 @@ import {
   MoveRight,
   Eye,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import {
   Button,
@@ -32,8 +33,11 @@ import {
   Select,
   SelectItem,
   Divider,
+  Checkbox,
 } from "@heroui/react";
 import { DynamicIcon } from "@/app/components/ui/DynamicIcons";
+import { Upload, FileText } from "lucide-react";
+import { useUser } from "@/app/hooks/useUser";
 
 interface Job {
   _id: string;
@@ -86,13 +90,83 @@ const statusConfig: Record<
   },
 };
 
+interface JobDocuments {
+  cv?:
+    | {
+        _id: string;
+        title: string;
+        file: {
+          fileName: string;
+          fileId: string;
+          size: number;
+        };
+      }
+    | string; // Can be populated or just ID
+  coverLetter?:
+    | {
+        _id: string;
+        title: string;
+        file: {
+          fileName: string;
+          fileId: string;
+          size: number;
+        };
+      }
+    | string;
+  portfolio?:
+    | {
+        _id: string;
+        title: string;
+        file: {
+          fileName: string;
+          fileId: string;
+          size: number;
+        };
+      }
+    | string;
+  other?: Array<
+    | {
+        _id: string;
+        title: string;
+        file: {
+          fileName: string;
+          fileId: string;
+          size: number;
+        };
+      }
+    | string
+  >;
+}
+
+interface Job {
+  _id: string;
+  title: string;
+  company: string;
+  jobUrl?: string;
+  country: string;
+  city: string;
+  description?: string;
+  status: string;
+  applicationDate: Date;
+  notes?: string;
+  documents?: JobDocuments;
+}
+
 const JobTrackerHome: React.FC = () => {
+  const { user } = useUser();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [draggedJob, setDraggedJob] = useState<Job | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [editJob, setEditJob] = useState<Job | null>(null);
+  const [documentToRemove, setDocumentToRemove] = useState({
+    docId: "",
+    docType: "",
+  });
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [newJobStatus, setNewJobStatus] = useState<JobStatus>("wishlist");
   const [formData, setFormData] = useState({
@@ -104,9 +178,44 @@ const JobTrackerHome: React.FC = () => {
     description: "",
     notes: "",
   });
-
+  const [selectedDocuments, setSelectedDocuments] = useState({
+    cv: null as string | null,
+    coverLetter: null as string | null,
+    portfolio: null as string | null,
+  });
+  const [uploadingNewDoc, setUploadingNewDoc] = useState(false);
+  const [pendingDocuments, setPendingDocuments] = useState<{
+    cv: {
+      file?: File;
+      title?: string;
+      description?: string;
+      isDefault?: boolean;
+    } | null;
+    coverLetter: {
+      file?: File;
+      title?: string;
+      description?: string;
+      isDefault?: boolean;
+    } | null;
+    portfolio: {
+      file?: File;
+      title?: string;
+      description?: string;
+      isDefault?: boolean;
+    } | null;
+  }>({
+    cv: null,
+    coverLetter: null,
+    portfolio: null,
+  });
+  const [availableDocuments, setAvailableDocuments] = useState<
+    { _id: string; type: string; title: string; isDefault: boolean }[]
+  >([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [alsoDeletePermanent, setAlsoDeletePermanent] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   // Analytics calculations
   const analytics = useMemo(() => {
@@ -193,6 +302,84 @@ const JobTrackerHome: React.FC = () => {
     };
   }, [jobs]);
 
+  /* Add these helper functions */
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return "Unknown size";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const handleDownloadJobDocument = async (docId: string, fileName: string) => {
+    try {
+      const response = await fetch(`/api/documents/${docId}/download`);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        setError("Failed to download document");
+      }
+    } catch (err: unknown) {
+      console.error("Error downloading document:", err);
+      setError("Failed to download document");
+    }
+  };
+
+  const fetchAvailableDocuments = async () => {
+    setLoadingDocuments(true);
+    try {
+      const response = await fetch("/api/documents");
+      const json = await response.json();
+      const items = Array.isArray(json) ? json : json?.data || [];
+      setAvailableDocuments(items);
+
+      // Auto-select default documents
+      const defaultCV = items.find(
+        (doc: {
+          _id: string;
+          type: string;
+          title: string;
+          isDefault: boolean;
+        }) => doc.type === "cv" && doc.isDefault,
+      );
+      const defaultCoverLetter = items.find(
+        (doc: {
+          _id: string;
+          type: string;
+          title: string;
+          isDefault: boolean;
+        }) => doc.type === "cover_letter" && doc.isDefault,
+      );
+      const defaultPortfolio = items.find(
+        (doc: {
+          _id: string;
+          type: string;
+          title: string;
+          isDefault: boolean;
+        }) => doc.type === "portfolio" && doc.isDefault,
+      );
+
+      setSelectedDocuments({
+        cv: defaultCV?._id || null,
+        coverLetter: defaultCoverLetter?._id || null,
+        portfolio: defaultPortfolio?._id || null,
+      });
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
@@ -250,7 +437,114 @@ const JobTrackerHome: React.FC = () => {
     setDraggedJob(null);
   };
 
+  const handleFileSelect = (
+    type: "cv" | "coverLetter" | "portfolio",
+    file: File,
+  ) => {
+    const docType =
+      type === "coverLetter"
+        ? "Cover Letter"
+        : type.charAt(0).toUpperCase() + type.slice(1);
+    const defaultTitle = formData.company
+      ? `${docType} for ${formData.company}`
+      : `${docType} - ${new Date().toLocaleDateString()}`;
+
+    setPendingDocuments({
+      ...pendingDocuments,
+      [type]: {
+        file,
+        title: defaultTitle,
+        description: "",
+        isDefault: false,
+      },
+    });
+  };
+
+  const handleRemovePendingDocument = (
+    type: "cv" | "coverLetter" | "portfolio",
+  ) => {
+    setPendingDocuments({
+      ...pendingDocuments,
+      [type]: null,
+    });
+  };
+
+  const handleRemove = async (
+    jobId: string,
+    docId: string,
+    docType: string,
+  ) => {
+    setIsDeleting(true);
+    console.log("Document to remove: ", documentToRemove);
+    console.log("Job ID: ", jobId);
+    console.log("Doc ID: ", docId);
+    console.log("Doc Type: ", docType);
+    try {
+      const jobResponse = await fetch(`/api/jobs/${jobId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          removeDocument: {
+            docType: docType, // "cv", "coverLetter", etc.
+            docId: docId,
+          },
+        }),
+      });
+
+      if (!jobResponse.ok)
+        throw new Error("Failed to unlink document from job");
+
+      setSelectedJob((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          documents: {
+            ...prev.documents,
+            [docType]: null, // This removes the document from the UI list
+          },
+        };
+      });
+
+      // 2. Update your main 'jobs' list so the change persists if you close/reopen
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job._id === jobId
+            ? { ...job, documents: { ...job.documents, [docType]: null } }
+            : job,
+        ),
+      );
+
+      // 2. If the user checked the "Delete permanently" checkbox
+      if (alsoDeletePermanent) {
+        const docResponse = await fetch(`/api/documents/${docId}`, {
+          method: "DELETE",
+        });
+
+        if (docResponse.ok) {
+          console.log("Document removed successfully");
+          // Update your local Documents state if you're on a page that lists them
+          // setDocuments(prev => prev.filter(d => d._id !== docId));
+        } else {
+          console.error("Unlinked from job, but failed to delete from storage");
+          // Note: We don't throw here because the unlinking part actually succeeded
+        }
+      }
+
+      // 3. Refresh your UI (e.g., refresh job list or close modal)
+      // fetchJobs();
+      setShowRemoveConfirm(false);
+      setAlsoDeletePermanent(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to remove document",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleCreateJob = async () => {
+    // Validation
     if (
       !formData.title ||
       !formData.company ||
@@ -260,42 +554,147 @@ const JobTrackerHome: React.FC = () => {
       return;
     }
 
+    setUploadingNewDoc(true);
+    setError(null);
+
     try {
-      const response = await fetch("/api/jobs", {
-        method: "POST",
+      // Normalize IDs (handle both string and object formats)
+      const getDocId = (
+        doc: string | { _id: string } | null | undefined,
+      ): string | null => {
+        if (typeof doc === "string") return doc;
+        if (doc && typeof doc === "object" && "_id" in doc) return doc._id;
+        return null;
+      };
+
+      let cvId = getDocId(
+        selectedDocuments.cv || (isEditing ? editJob?.documents?.cv : null),
+      );
+      let clId = getDocId(
+        selectedDocuments.coverLetter ||
+          (isEditing ? editJob?.documents?.coverLetter : null),
+      );
+      let pfId = getDocId(
+        selectedDocuments.portfolio ||
+          (isEditing ? editJob?.documents?.portfolio : null),
+      );
+
+      // Helper to handle individual file uploads
+      const uploadDoc = async (
+        docObj: {
+          file?: File;
+          title?: string;
+          description?: string;
+          isDefault?: boolean;
+        },
+        type: string,
+      ) => {
+        const fd = new FormData();
+        fd.append("user", user?._id || "");
+        fd.append("file", docObj.file!);
+        fd.append("type", type);
+        fd.append(
+          "title",
+          docObj.title || `${type.toUpperCase()} - ${formData.company}`,
+        );
+
+        const res = await fetch("/api/documents", { method: "POST", body: fd });
+        const json = await res.json();
+        if (!res.ok) throw new Error(`${type} Upload failed`);
+        return json.data._id;
+      };
+
+      // 1. Handle New Uploads (only if files are pending)
+      if (pendingDocuments.cv)
+        cvId = await uploadDoc(pendingDocuments.cv, "cv");
+      if (pendingDocuments.coverLetter)
+        clId = await uploadDoc(pendingDocuments.coverLetter, "cover_letter");
+      if (pendingDocuments.portfolio)
+        pfId = await uploadDoc(pendingDocuments.portfolio, "portfolio");
+
+      // 2. Prepare Request Configuration
+      // If editing, we use PUT and append the job ID to the URL
+      const method = isEditing ? "PUT" : "POST";
+      const endpoint = isEditing ? `/api/jobs/${editJob?._id}` : "/api/jobs";
+
+      const jobPayload = {
+        ...formData,
+        status: newJobStatus,
+        // Only set applicationDate on create, or preserve it on edit
+        applicationDate: isEditing ? editJob?.applicationDate : new Date(),
+        documents: {
+          cv: cvId,
+          coverLetter: clId,
+          portfolio: pfId,
+          other: isEditing ? editJob?.documents?.other || [] : [],
+        },
+      };
+
+      // 3. Send Job Request
+      const jobResponse = await fetch(endpoint, {
+        method: method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          status: newJobStatus,
-          applicationDate: new Date(),
-        }),
+        body: JSON.stringify(jobPayload),
       });
 
-      const json = await response.json();
-      if (response.ok) {
-        const newJob = json?.data || json;
-        setJobs([...jobs, newJob]);
-        setShowModal(false);
-        setFormData({
-          title: "",
-          company: "",
-          jobUrl: "",
-          country: "",
-          city: "",
-          description: "",
-          notes: "",
-        });
+      const json = await jobResponse.json();
+      if (!jobResponse.ok)
+        throw new Error(
+          json?.message || `Failed to ${isEditing ? "edit" : "create"} job`,
+        );
+
+      const updatedOrNewJob = json?.data || json;
+
+      // 4. Update UI State
+      console.log("Received job response:", updatedOrNewJob);
+      if (isEditing) {
+        // For editing, update the existing job
+        setJobs((prevJobs) =>
+          prevJobs.map((j) =>
+            j._id === updatedOrNewJob._id ? updatedOrNewJob : j,
+          ),
+        );
+        // Update selectedJob if viewing the job that was just edited
+        if (selectedJob?._id === updatedOrNewJob._id) {
+          setSelectedJob(updatedOrNewJob);
+        }
       } else {
-        console.error("Create failed", json);
-        setError(json?.message || "Failed to create job");
+        // For creating, add the new job to the beginning of the list
+        setJobs((prevJobs) => [updatedOrNewJob, ...prevJobs]);
       }
+
+      // 5. Cleanup
+      setShowModal(false);
+      resetForm(); // Move reset logic to a helper function
     } catch (error) {
-      console.error("Error creating job:", error);
+      console.error(`Error ${isEditing ? "editing" : "creating"} job:`, error);
+      setError(error instanceof Error ? error.message : "Operation failed");
+    } finally {
+      setIsEditing(false);
+      setUploadingNewDoc(false);
     }
+  };
+
+  // Separate helper to keep things tidy
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      company: "",
+      jobUrl: "",
+      country: "",
+      city: "",
+      description: "",
+      notes: "",
+    });
+    setSelectedDocuments({ cv: null, coverLetter: null, portfolio: null });
+    setPendingDocuments({ cv: null, coverLetter: null, portfolio: null });
+    setNewJobStatus("wishlist");
+    setIsEditing(false);
   };
 
   const handleDeleteJob = async () => {
     if (!jobToDelete) return;
+    setIsDeleting(true);
 
     try {
       const response = await fetch(`/api/jobs/${jobToDelete}`, {
@@ -314,6 +713,8 @@ const JobTrackerHome: React.FC = () => {
     } catch (error) {
       console.error("Error deleting job:", error);
       setError("Failed to delete job");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,8 +723,17 @@ const JobTrackerHome: React.FC = () => {
     setShowDeleteConfirm(true);
   };
 
-  const handleViewJob = (job: Job) => {
-    setSelectedJob(job);
+  const handleViewJob = async (job: Job) => {
+    try {
+      // Fetch the latest job data to ensure documents are populated
+      const response = await fetch(`/api/jobs/${job._id}`);
+      const json = await response.json();
+      const jobData = json?.data || json;
+      setSelectedJob(jobData);
+    } catch (err) {
+      console.error("Error fetching job details:", err);
+      setSelectedJob(job);
+    }
     setShowViewModal(true);
   };
 
@@ -334,11 +744,43 @@ const JobTrackerHome: React.FC = () => {
   const openModal = (status: JobStatus) => {
     setNewJobStatus(status);
     setShowModal(true);
+    fetchAvailableDocuments(); // Fetch documents when modal opens
   };
 
+  const handleEditClick = (job: Job) => {
+    setEditJob(job);
+    setIsEditing(true);
+    setFormData({
+      title: job.title,
+      company: job.company,
+      jobUrl: job.jobUrl || "",
+      country: job.country,
+      city: job.city,
+      description: job.description || "",
+      notes: job.notes || "",
+    });
+
+    // Helper to safely get document ID
+    const getDocId = (
+      doc: string | { _id: string } | null | undefined,
+    ): string | null => {
+      if (typeof doc === "string") return doc;
+      if (doc && typeof doc === "object" && "_id" in doc) return doc._id;
+      return null;
+    };
+
+    setSelectedDocuments({
+      cv: getDocId(job.documents?.cv),
+      coverLetter: getDocId(job.documents?.coverLetter),
+      portfolio: getDocId(job.documents?.portfolio),
+    });
+    setNewJobStatus(job.status as JobStatus);
+    setShowModal(true);
+    fetchAvailableDocuments();
+  };
   return (
     <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-[1800px] mx-auto">
+      <div className="max-w-450 mx-auto">
         {/* Header */}
         <header className="text-foreground mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Dashboard</h1>
@@ -360,7 +802,7 @@ const JobTrackerHome: React.FC = () => {
                 {(Object.keys(statusConfig) as JobStatus[]).map((status) => (
                   <Card
                     key={status}
-                    className="min-w-[100px] rounded-xl p-4 flex-1 text-center cursor-pointer transition-all hover:-translate-y-0.5 relative border-t-[6px] border-transparent"
+                    className="min-w-25 rounded-xl p-4 flex-1 text-center cursor-pointer transition-all hover:-translate-y-0.5 relative border-t-[6px] border-transparent"
                     style={{
                       borderTopColor: statusConfig[status].color,
                     }}
@@ -397,6 +839,7 @@ const JobTrackerHome: React.FC = () => {
                     color="primary"
                     size="lg"
                     className="font-semibold"
+                    aria-label="Add first job application"
                     onPress={() => openModal("wishlist")}
                   >
                     Add first job
@@ -439,7 +882,7 @@ const JobTrackerHome: React.FC = () => {
                         </div>
                       </CardHeader>
 
-                      <CardBody className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 min-h-[100px]">
+                      <CardBody className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 min-h-25">
                         {getJobsByStatus(status).length === 0 ? (
                           <div className="col-span-full text-center text-foreground py-10">
                             No jobs in this stage
@@ -453,7 +896,7 @@ const JobTrackerHome: React.FC = () => {
                               onDragStart={() => handleDragStart(job)}
                             >
                               <div className="flex justify-between items-start mb-2">
-                                <h3 className="text-lg text-foreground font-semibold flex-1 mr-2">
+                                <h3 className="text-lg text-foreground font-semibold flex-1 mr-2 line-clamp-1">
                                   {job.title}
                                 </h3>
                                 <div className="flex items-center justify-center gap-2">
@@ -465,11 +908,18 @@ const JobTrackerHome: React.FC = () => {
                                     <Eye size={15} />
                                   </button>
                                   <button
+                                    className="bg-background/80 text-foreground w-7 h-7 rounded-lg hover:bg-background transition-all hover:scale-110 flex items-center justify-center cursor-pointer shadow"
+                                    onClick={() => handleEditClick(job)}
+                                    aria-label="View job details"
+                                  >
+                                    <Pen size={15} />
+                                  </button>
+                                  <button
                                     className="bg-red-300/50 dark:bg-red-900/50 text-red-600 w-7 h-7 rounded-md hover:bg-red-200 transition-all hover:scale-110 flex items-center justify-center shrink-0 leading-none cursor-pointer"
                                     onClick={() => openDeleteConfirm(job._id)}
                                     aria-label="Delete job"
                                   >
-                                    <Trash size={15} />
+                                    <Trash2 size={15} />
                                   </button>
                                 </div>
                               </div>
@@ -558,6 +1008,7 @@ const JobTrackerHome: React.FC = () => {
                         value={analytics.successRate}
                         color="success"
                         size="sm"
+                        aria-label="Success rate progress"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3 pt-2">
@@ -608,6 +1059,7 @@ const JobTrackerHome: React.FC = () => {
                         value={analytics.interviewRate}
                         color="primary"
                         size="sm"
+                        aria-label="Interview stage conversion rate"
                       />
                       <p className="text-foreground/50 text-xs mt-1">
                         Jobs that reached interview or beyond
@@ -626,6 +1078,7 @@ const JobTrackerHome: React.FC = () => {
                         value={analytics.offerRate}
                         color="warning"
                         size="sm"
+                        aria-label="Offer stage conversion rate"
                       />
                       <p className="text-foreground/50 text-xs mt-1">
                         Jobs that received offers or were accepted
@@ -644,6 +1097,7 @@ const JobTrackerHome: React.FC = () => {
                         value={analytics.acceptanceRate}
                         color="success"
                         size="sm"
+                        aria-label="Acceptance rate progress"
                       />
                       <p className="text-foreground/50 text-xs mt-1">
                         Offers that were accepted
@@ -728,20 +1182,16 @@ const JobTrackerHome: React.FC = () => {
           </div>
         )}
 
-        {/* Floating Add Button */}
-        <button
-          title="Add job"
-          onClick={() => openModal("wishlist")}
-          className="fixed right-6 bottom-6 w-14 h-14 rounded-full bg-gray-900 text-white text-3xl shadow-2xl hover:bg-gray-800 transition-all hover:scale-110 z-50"
-        >
-          +
-        </button>
-
         {/* Add Job Modal */}
         <Modal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          size="2xl"
+          onClose={() => {
+            setShowModal(false);
+            resetForm();
+            setIsEditing(false);
+            setEditJob(null);
+          }}
+          size="3xl"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -752,20 +1202,25 @@ const JobTrackerHome: React.FC = () => {
         >
           <ModalContent>
             <ModalHeader className="text-foreground text-xl font-semibold">
-              Add New Job
+              {isEditing ? "Edit Job" : "Add New Job"}
             </ModalHeader>
             <ModalBody>
               <div className="space-y-4">
+                {error && (
+                  <div className="bg-danger/10 border border-danger/20 rounded-lg p-3">
+                    <p className="text-danger text-sm">{error}</p>
+                  </div>
+                )}
+
                 <Input
-                  label="Job Title"
+                  label="JobTitle"
                   placeholder="e.g., Senior Software Engineer"
                   value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, title: value }))
                   }
                   isRequired
                   classNames={{
-                    label: "text-foreground",
                     input: "text-foreground",
                   }}
                 />
@@ -774,12 +1229,11 @@ const JobTrackerHome: React.FC = () => {
                   label="Company"
                   placeholder="e.g., Google"
                   value={formData.company}
-                  onChange={(e) =>
-                    setFormData({ ...formData, company: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, company: value }))
                   }
                   isRequired
                   classNames={{
-                    label: "text-foreground",
                     input: "text-foreground",
                   }}
                 />
@@ -789,8 +1243,8 @@ const JobTrackerHome: React.FC = () => {
                     label="Country"
                     placeholder="e.g., USA"
                     value={formData.country}
-                    onChange={(e) =>
-                      setFormData({ ...formData, country: e.target.value })
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, country: value }))
                     }
                     isRequired
                     classNames={{
@@ -803,8 +1257,8 @@ const JobTrackerHome: React.FC = () => {
                     label="City"
                     placeholder="e.g., San Francisco"
                     value={formData.city}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, city: value }))
                     }
                     isRequired
                     classNames={{
@@ -819,11 +1273,10 @@ const JobTrackerHome: React.FC = () => {
                   type="url"
                   placeholder="https://..."
                   value={formData.jobUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, jobUrl: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, jobUrl: value }))
                   }
                   classNames={{
-                    label: "text-foreground",
                     input: "text-foreground",
                   }}
                 />
@@ -832,12 +1285,11 @@ const JobTrackerHome: React.FC = () => {
                   label="Description"
                   placeholder="Job description or requirements..."
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, description: value }))
                   }
                   minRows={3}
                   classNames={{
-                    label: "text-foreground",
                     input: "text-foreground",
                   }}
                 />
@@ -846,38 +1298,543 @@ const JobTrackerHome: React.FC = () => {
                   label="Notes"
                   placeholder="Add personal notes..."
                   value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, notes: value }))
                   }
                   minRows={2}
                   classNames={{
-                    label: "text-foreground",
                     input: "text-foreground",
                   }}
                 />
+                {!isEditing && (
+                  <Select
+                    label="Status"
+                    placeholder="Select status"
+                    selectedKeys={[newJobStatus]}
+                    onChange={(e) =>
+                      setNewJobStatus(e.target.value as JobStatus)
+                    }
+                    className={isEditing ? "hidden" : ""}
+                    classNames={{
+                      value: "text-foreground",
+                    }}
+                  >
+                    {(Object.keys(statusConfig) as JobStatus[]).map(
+                      (status) => (
+                        <SelectItem key={status} className="text-foreground">
+                          {statusConfig[status].title}
+                        </SelectItem>
+                      ),
+                    )}
+                  </Select>
+                )}
 
-                <Select
-                  label="Status"
-                  placeholder="Select status"
-                  selectedKeys={[newJobStatus]}
-                  onChange={(e) => setNewJobStatus(e.target.value as JobStatus)}
-                  classNames={{
-                    label: "text-foreground",
-                    value: "text-foreground",
-                  }}
-                >
-                  {(Object.keys(statusConfig) as JobStatus[]).map((status) => (
-                    <SelectItem key={status} className="text-foreground">
-                      {statusConfig[status].title}
-                    </SelectItem>
-                  ))}
-                </Select>
+                <Divider className="my-4 bg-foreground/10" />
+
+                {/* Documents Section */}
+                <div>
+                  <h3 className="text-foreground font-semibold mb-3 flex items-center gap-2">
+                    <FileText size={18} />
+                    Attach Documents (Optional)
+                  </h3>
+
+                  {loadingDocuments ? (
+                    <div className="flex justify-center py-4">
+                      <Spinner size="sm" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* CV Selection */}
+                      <div>
+                        <label className="text-foreground/70 text-sm mb-2 block">
+                          CV/Resume
+                        </label>
+                        {!pendingDocuments.cv ? (
+                          <div>
+                            <div className="flex gap-2">
+                              <Select
+                                aria-label="Select CV or resume"
+                                placeholder="Select CV"
+                                selectedKeys={
+                                  selectedDocuments.cv
+                                    ? [selectedDocuments.cv]
+                                    : []
+                                }
+                                onSelectionChange={(keys) => {
+                                  const selected = Array.from(
+                                    keys,
+                                  )[0] as string;
+                                  setSelectedDocuments({
+                                    ...selectedDocuments,
+                                    cv: selected || null,
+                                  });
+                                }}
+                                classNames={{
+                                  trigger: "bg-foreground/5",
+                                  value: "text-foreground",
+                                }}
+                                className="flex-1"
+                                disallowEmptySelection
+                              >
+                                {availableDocuments
+                                  .filter((doc) => doc.type === "cv")
+                                  .map((doc) => (
+                                    <SelectItem
+                                      key={doc._id}
+                                      textValue={doc.title}
+                                      className="text-foreground"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span>{doc.title}</span>
+                                        {doc.isDefault && (
+                                          <Chip
+                                            size="sm"
+                                            color="success"
+                                            variant="flat"
+                                          >
+                                            Default
+                                          </Chip>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                              </Select>
+                              <input
+                                aria-label="Upload new CV or resume file"
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleFileSelect("cv", file);
+                                  }
+                                  e.target.value = ""; // Reset input
+                                }}
+                                className="hidden"
+                                id="cv-upload"
+                              />
+                              <label htmlFor="cv-upload">
+                                <Button
+                                  aria-label="Upload new CV or resume file"
+                                  as="span"
+                                  variant="bordered"
+                                  startContent={<Upload size={16} />}
+                                >
+                                  Upload New
+                                </Button>
+                              </label>
+                            </div>
+                          </div>
+                        ) : pendingDocuments.cv && pendingDocuments.cv.file ? (
+                          /* Expanded form for pending document */
+                          <div className="mt-3 p-4 border border-foreground/20 rounded-lg bg-foreground/5 space-y-3">
+                            <div className="flex justify-between items-center">
+                              <p className="text-sm font-medium text-foreground">
+                                📎 {pendingDocuments.cv.file.name}
+                              </p>
+                              <Button
+                                aria-label="Remove CV file"
+                                size="sm"
+                                variant="light"
+                                color="danger"
+                                onPress={() =>
+                                  handleRemovePendingDocument("cv")
+                                }
+                              >
+                                ✕ Remove
+                              </Button>
+                            </div>
+
+                            <Input
+                              label="Document Title"
+                              value={pendingDocuments.cv.title}
+                              onChange={(e) =>
+                                setPendingDocuments({
+                                  ...pendingDocuments,
+                                  cv: {
+                                    ...pendingDocuments.cv,
+                                    title: e.target.value,
+                                  },
+                                })
+                              }
+                              size="sm"
+                            />
+
+                            <Textarea
+                              label="Description (Optional)"
+                              value={pendingDocuments.cv.description}
+                              onChange={(e) =>
+                                setPendingDocuments({
+                                  ...pendingDocuments,
+                                  cv: {
+                                    ...pendingDocuments.cv,
+                                    description: e.target.value,
+                                  },
+                                })
+                              }
+                              minRows={2}
+                              size="sm"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                aria-label="Set as default CV"
+                                type="checkbox"
+                                id="cv-default"
+                                checked={pendingDocuments.cv.isDefault}
+                                onChange={(e) =>
+                                  setPendingDocuments({
+                                    ...pendingDocuments,
+                                    cv: {
+                                      ...pendingDocuments.cv,
+                                      isDefault: e.target.checked,
+                                    },
+                                  })
+                                }
+                              />
+                              <label
+                                htmlFor="cv-default"
+                                className="text-sm text-foreground"
+                              >
+                                Set as default CV
+                              </label>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Cover Letter Selection */}
+                      <div>
+                        <label className="text-foreground/70 text-sm mb-2 block">
+                          Cover Letter
+                        </label>
+                        {!pendingDocuments.coverLetter ? (
+                          <div>
+                            <div className="flex gap-2">
+                              <Select
+                                aria-label="Select Cover Letter"
+                                placeholder="Select Cover Letter"
+                                selectedKeys={
+                                  selectedDocuments.coverLetter
+                                    ? [selectedDocuments.coverLetter]
+                                    : []
+                                }
+                                onSelectionChange={(keys) => {
+                                  const selected = Array.from(
+                                    keys,
+                                  )[0] as string;
+                                  setSelectedDocuments({
+                                    ...selectedDocuments,
+                                    coverLetter: selected || null,
+                                  });
+                                }}
+                                classNames={{
+                                  trigger: "bg-foreground/5",
+                                  value: "text-foreground",
+                                }}
+                                className="flex-1"
+                                disallowEmptySelection
+                              >
+                                {availableDocuments
+                                  .filter((doc) => doc.type === "cover_letter")
+                                  .map((doc) => (
+                                    <SelectItem
+                                      key={doc._id}
+                                      textValue={doc.title}
+                                      className="text-foreground"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span>{doc.title}</span>
+                                        {doc.isDefault && (
+                                          <Chip
+                                            size="sm"
+                                            color="success"
+                                            variant="flat"
+                                          >
+                                            Default
+                                          </Chip>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                              </Select>
+                              <input
+                                aria-label="Upload new cover letter file"
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleFileSelect("coverLetter", file);
+                                  }
+                                  e.target.value = ""; // Reset input
+                                }}
+                                className="hidden"
+                                id="coverLetter-upload"
+                              />
+                              <label htmlFor="coverLetter-upload">
+                                <Button
+                                  as="span"
+                                  variant="bordered"
+                                  startContent={<Upload size={16} />}
+                                >
+                                  Upload New
+                                </Button>
+                              </label>
+                            </div>
+                          </div>
+                        ) : pendingDocuments.coverLetter &&
+                          pendingDocuments.coverLetter.file ? (
+                          /* Expanded form for pending document */
+                          <div className="mt-3 p-4 border border-foreground/20 rounded-lg bg-foreground/5 space-y-3">
+                            <div className="flex justify-between items-center">
+                              <p className="text-sm font-medium text-foreground">
+                                📎 {pendingDocuments.coverLetter.file.name}
+                              </p>
+                              <Button
+                                aria-label="Remove Cover Letter file"
+                                size="sm"
+                                variant="light"
+                                color="danger"
+                                onPress={() =>
+                                  handleRemovePendingDocument("coverLetter")
+                                }
+                              >
+                                ✕ Remove
+                              </Button>
+                            </div>
+
+                            <Input
+                              label="Document Title"
+                              value={pendingDocuments.coverLetter.title}
+                              onChange={(e) =>
+                                setPendingDocuments({
+                                  ...pendingDocuments,
+                                  coverLetter: {
+                                    ...pendingDocuments.coverLetter,
+                                    title: e.target.value,
+                                  },
+                                })
+                              }
+                              size="sm"
+                            />
+
+                            <Textarea
+                              label="Description (Optional)"
+                              value={pendingDocuments.coverLetter.description}
+                              onChange={(e) =>
+                                setPendingDocuments({
+                                  ...pendingDocuments,
+                                  coverLetter: {
+                                    ...pendingDocuments.coverLetter,
+                                    description: e.target.value,
+                                  },
+                                })
+                              }
+                              minRows={2}
+                              size="sm"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                aria-label="Set as default Cover Letter"
+                                type="checkbox"
+                                id="coverLetter-default"
+                                checked={pendingDocuments.coverLetter.isDefault}
+                                onChange={(e) =>
+                                  setPendingDocuments({
+                                    ...pendingDocuments,
+                                    coverLetter: {
+                                      ...pendingDocuments.coverLetter,
+                                      isDefault: e.target.checked,
+                                    },
+                                  })
+                                }
+                              />
+                              <label
+                                htmlFor="coverLetter-default"
+                                className="text-sm text-foreground"
+                              >
+                                Set as default Cover Letter
+                              </label>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Portfolio Selection */}
+                      <div>
+                        <label className="text-foreground/70 text-sm mb-2 block">
+                          Portfolio
+                        </label>
+                        {!pendingDocuments.portfolio ? (
+                          <div>
+                            <div className="flex gap-2">
+                              <Select
+                                aria-label="Select Portfolio"
+                                placeholder="Select Portfolio"
+                                selectedKeys={
+                                  selectedDocuments.portfolio
+                                    ? [selectedDocuments.portfolio]
+                                    : []
+                                }
+                                onSelectionChange={(keys) => {
+                                  const selected = Array.from(
+                                    keys,
+                                  )[0] as string;
+                                  setSelectedDocuments({
+                                    ...selectedDocuments,
+                                    portfolio: selected || null,
+                                  });
+                                }}
+                                classNames={{
+                                  trigger: "bg-foreground/5",
+                                  value: "text-foreground",
+                                }}
+                                className="flex-1"
+                                disallowEmptySelection
+                              >
+                                {availableDocuments
+                                  .filter((doc) => doc.type === "portfolio")
+                                  .map((doc) => (
+                                    <SelectItem
+                                      key={doc._id}
+                                      textValue={doc.title}
+                                      className="text-foreground"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span>{doc.title}</span>
+                                        {doc.isDefault && (
+                                          <Chip
+                                            size="sm"
+                                            color="success"
+                                            variant="flat"
+                                          >
+                                            Default
+                                          </Chip>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                              </Select>
+                              <input
+                                aria-label="Upload new portfolio file"
+                                type="file"
+                                accept=".pdf,.doc,.docx"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleFileSelect("portfolio", file);
+                                  }
+                                  e.target.value = ""; // Reset input
+                                }}
+                                className="hidden"
+                                id="portfolio-upload"
+                              />
+                              <label htmlFor="portfolio-upload">
+                                <Button
+                                  as="span"
+                                  variant="bordered"
+                                  startContent={<Upload size={16} />}
+                                >
+                                  Upload New
+                                </Button>
+                              </label>
+                            </div>
+                          </div>
+                        ) : pendingDocuments.portfolio &&
+                          pendingDocuments.portfolio.file ? (
+                          /* Expanded form for pending document */
+                          <div className="mt-3 p-4 border border-foreground/20 rounded-lg bg-foreground/5 space-y-3">
+                            <div className="flex justify-between items-center">
+                              <p className="text-sm font-medium text-foreground">
+                                📎 {pendingDocuments.portfolio.file.name}
+                              </p>
+                              <Button
+                                aria-label="Remove Portfolio file"
+                                size="sm"
+                                variant="light"
+                                color="danger"
+                                onPress={() =>
+                                  handleRemovePendingDocument("portfolio")
+                                }
+                              >
+                                ✕ Remove
+                              </Button>
+                            </div>
+
+                            <Input
+                              label="Document Title"
+                              value={pendingDocuments.portfolio.title}
+                              onChange={(e) =>
+                                setPendingDocuments({
+                                  ...pendingDocuments,
+                                  portfolio: {
+                                    ...pendingDocuments.portfolio,
+                                    title: e.target.value,
+                                  },
+                                })
+                              }
+                              size="sm"
+                            />
+
+                            <Textarea
+                              label="Description (Optional)"
+                              value={pendingDocuments.portfolio.description}
+                              onChange={(e) =>
+                                setPendingDocuments({
+                                  ...pendingDocuments,
+                                  portfolio: {
+                                    ...pendingDocuments.portfolio,
+                                    description: e.target.value,
+                                  },
+                                })
+                              }
+                              minRows={2}
+                              size="sm"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                aria-label="Set as default Portfolio"
+                                type="checkbox"
+                                id="portfolio-default"
+                                checked={pendingDocuments.portfolio.isDefault}
+                                onChange={(e) =>
+                                  setPendingDocuments({
+                                    ...pendingDocuments,
+                                    portfolio: {
+                                      ...pendingDocuments.portfolio,
+                                      isDefault: e.target.checked,
+                                    },
+                                  })
+                                }
+                              />
+                              <label
+                                htmlFor="portfolio-default"
+                                className="text-sm text-foreground"
+                              >
+                                Set as default Portfolio
+                              </label>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </ModalBody>
             <ModalFooter>
               <Button
+                aria-label="modal-button"
                 variant="light"
-                onPress={() => setShowModal(false)}
+                onPress={() => {
+                  setShowModal(false);
+                  resetForm();
+                  setIsEditing(false);
+                  setEditJob(null);
+                }}
                 className="text-foreground"
               >
                 Cancel
@@ -885,14 +1842,22 @@ const JobTrackerHome: React.FC = () => {
               <Button
                 color="primary"
                 onPress={handleCreateJob}
+                isLoading={uploadingNewDoc}
                 isDisabled={
                   !formData.title ||
                   !formData.company ||
                   !formData.country ||
-                  !formData.city
+                  !formData.city ||
+                  uploadingNewDoc
                 }
               >
-                Add Job
+                {isEditing
+                  ? uploadingNewDoc
+                    ? "Saving..."
+                    : "Save Changes"
+                  : uploadingNewDoc
+                    ? "Creating..."
+                    : "Add Job"}
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -901,8 +1866,8 @@ const JobTrackerHome: React.FC = () => {
         {/* View Job Details Modal */}
         <Modal
           isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          size="2xl"
+          onClose={() => (setShowViewModal(false), setIsEditing(false))}
+          size="3xl"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -1002,18 +1967,350 @@ const JobTrackerHome: React.FC = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* Attached Documents Section */}
+                  {selectedJob.documents && (
+                    <>
+                      <Divider className="bg-foreground/10" />
+                      <div>
+                        <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <FileText size={18} />
+                          Attached Documents
+                        </h4>
+                        <div className="space-y-3">
+                          {/* CV */}
+                          {selectedJob.documents.cv &&
+                            typeof selectedJob.documents.cv === "object" &&
+                            selectedJob.documents.cv?.title && (
+                              <Card className="bg-foreground/5 border border-foreground/10">
+                                <CardBody className="p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <span className="text-lg">📄</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-foreground font-medium text-sm">
+                                          {selectedJob.documents.cv.title}
+                                        </p>
+                                        <p className="text-foreground/60 text-xs">
+                                          {
+                                            selectedJob.documents.cv.file
+                                              ?.fileName
+                                          }{" "}
+                                          •{" "}
+                                          {formatFileSize(
+                                            selectedJob.documents.cv.file?.size,
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        aria-label="remove"
+                                        variant="flat"
+                                        color="danger"
+                                        startContent={<Trash2 size={14} />}
+                                        onPress={() => (
+                                          setShowRemoveConfirm(true),
+                                          setDocumentToRemove({
+                                            docId:
+                                              (typeof selectedJob?.documents
+                                                ?.cv === "object"
+                                                ? selectedJob.documents.cv._id
+                                                : null) || "",
+                                            docType: "cv",
+                                          })
+                                        )}
+                                      >
+                                        Remove
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        aria-label="download"
+                                        variant="flat"
+                                        color="primary"
+                                        startContent={<Download size={14} />}
+                                        onPress={() => {
+                                          if (
+                                            typeof selectedJob?.documents
+                                              ?.cv === "object" &&
+                                            selectedJob.documents.cv?._id &&
+                                            selectedJob.documents.cv?.file
+                                              ?.fileName
+                                          ) {
+                                            handleDownloadJobDocument(
+                                              selectedJob.documents.cv._id,
+                                              selectedJob.documents.cv.file
+                                                .fileName,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        Download
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardBody>
+                              </Card>
+                            )}
+
+                          {/* Cover Letter */}
+                          {selectedJob.documents.coverLetter &&
+                            typeof selectedJob.documents.coverLetter ===
+                              "object" &&
+                            selectedJob.documents.coverLetter?.title && (
+                              <Card className="bg-foreground/5 border border-foreground/10">
+                                <CardBody className="p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                                        <span className="text-lg">✉️</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-foreground font-medium text-sm">
+                                          {
+                                            selectedJob.documents.coverLetter
+                                              .title
+                                          }
+                                        </p>
+                                        <p className="text-foreground/60 text-xs">
+                                          {
+                                            selectedJob.documents.coverLetter
+                                              .file?.fileName
+                                          }{" "}
+                                          •{" "}
+                                          {formatFileSize(
+                                            selectedJob.documents.coverLetter
+                                              .file?.size,
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        aria-label="remove"
+                                        variant="flat"
+                                        color="danger"
+                                        startContent={<Trash2 size={14} />}
+                                        onPress={() => (
+                                          setShowRemoveConfirm(true),
+                                          setDocumentToRemove({
+                                            docId:
+                                              (typeof selectedJob?.documents
+                                                ?.coverLetter === "object"
+                                                ? selectedJob.documents
+                                                    .coverLetter._id
+                                                : null) || "",
+                                            docType: "coverLetter",
+                                          })
+                                        )}
+                                      >
+                                        Remove
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        aria-label="download"
+                                        variant="flat"
+                                        color="primary"
+                                        startContent={<Download size={14} />}
+                                        onPress={() => {
+                                          if (
+                                            typeof selectedJob?.documents
+                                              ?.coverLetter === "object" &&
+                                            selectedJob.documents.coverLetter
+                                              ?._id &&
+                                            selectedJob.documents.coverLetter
+                                              ?.file?.fileName
+                                          ) {
+                                            handleDownloadJobDocument(
+                                              selectedJob.documents.coverLetter
+                                                ._id,
+                                              selectedJob.documents.coverLetter
+                                                .file.fileName,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        Download
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardBody>
+                              </Card>
+                            )}
+
+                          {/* Portfolio */}
+                          {selectedJob.documents.portfolio &&
+                            typeof selectedJob.documents.portfolio ===
+                              "object" &&
+                            selectedJob.documents.portfolio?.title && (
+                              <Card className="bg-foreground/5 border border-foreground/10">
+                                <CardBody className="p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                                        <span className="text-lg">🎨</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-foreground font-medium text-sm">
+                                          {
+                                            selectedJob.documents.portfolio
+                                              .title
+                                          }
+                                        </p>
+                                        <p className="text-foreground/60 text-xs">
+                                          {
+                                            selectedJob.documents.portfolio.file
+                                              ?.fileName
+                                          }{" "}
+                                          •{" "}
+                                          {formatFileSize(
+                                            selectedJob.documents.portfolio.file
+                                              ?.size,
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        aria-label="remove"
+                                        variant="flat"
+                                        color="danger"
+                                        startContent={<Trash2 size={14} />}
+                                        onPress={() => (
+                                          setShowRemoveConfirm(true),
+                                          setDocumentToRemove({
+                                            docId:
+                                              (typeof selectedJob?.documents
+                                                ?.portfolio === "object"
+                                                ? selectedJob.documents
+                                                    .portfolio._id
+                                                : null) || "",
+                                            docType: "portfolio",
+                                          })
+                                        )}
+                                      >
+                                        Remove
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="flat"
+                                        aria-label="download-button"
+                                        color="success"
+                                        startContent={<Download size={14} />}
+                                        onPress={() => {
+                                          if (
+                                            typeof selectedJob?.documents
+                                              ?.portfolio === "object" &&
+                                            selectedJob.documents.portfolio
+                                              ?._id &&
+                                            selectedJob.documents.portfolio
+                                              ?.file?.fileName
+                                          ) {
+                                            handleDownloadJobDocument(
+                                              selectedJob.documents.portfolio
+                                                ._id,
+                                              selectedJob.documents.portfolio
+                                                .file.fileName,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        Download
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardBody>
+                              </Card>
+                            )}
+
+                          {/* Show message if no documents */}
+                          {!selectedJob.documents.cv &&
+                            !selectedJob.documents.coverLetter &&
+                            !selectedJob.documents.portfolio && (
+                              <p className="text-foreground/60 text-sm text-center py-4">
+                                No documents attached to this application
+                              </p>
+                            )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </ModalBody>
             <ModalFooter>
-              <Button color="primary" onPress={() => setShowViewModal(false)}>
+              <Button
+                aria-label="close-button"
+                color="primary"
+                onPress={() => setShowViewModal(false)}
+              >
                 Close
               </Button>
             </ModalFooter>
           </ModalContent>
         </Modal>
 
-        {/* Delete Confirmation Modal */}
+        {/* Document Remove Confirmation Modal */}
+        <Modal
+          isOpen={showRemoveConfirm}
+          onClose={() => setShowRemoveConfirm(false)}
+        >
+          <ModalContent>
+            <ModalHeader>Remove Document</ModalHeader>
+            <ModalBody>
+              <p>
+                Are you sure you want to remove this document from this job
+                application?
+              </p>
+
+              {/* The "Double Delete" Checkbox */}
+              <div className="flex items-center gap-2 mt-4 p-3 bg-danger-50 rounded-lg border border-danger-200">
+                <Checkbox
+                  color="danger"
+                  isSelected={alsoDeletePermanent}
+                  onValueChange={setAlsoDeletePermanent}
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-danger">
+                    Delete from library too?
+                  </span>
+                  <span className="text-xs text-danger-500 italic">
+                    Warning: This will delete the actual file permanently.
+                  </span>
+                </div>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={() => setShowRemoveConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="danger"
+                isLoading={isDeleting}
+                onPress={() =>
+                  selectedJob?._id &&
+                  handleRemove(
+                    selectedJob._id,
+                    documentToRemove.docId,
+                    documentToRemove.docType,
+                  )
+                }
+              >
+                Confirm Removal
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Job Delete Confirmation Modal */}
         <Modal
           isOpen={showDeleteConfirm}
           onClose={() => {
@@ -1041,6 +2338,7 @@ const JobTrackerHome: React.FC = () => {
             </ModalBody>
             <ModalFooter>
               <Button
+                aria-label="cancel-button"
                 variant="light"
                 onPress={() => {
                   setShowDeleteConfirm(false);
@@ -1050,7 +2348,12 @@ const JobTrackerHome: React.FC = () => {
               >
                 Cancel
               </Button>
-              <Button color="danger" onPress={handleDeleteJob}>
+              <Button
+                aria-label="delete-button"
+                isLoading={isDeleting}
+                color="danger"
+                onPress={handleDeleteJob}
+              >
                 Delete
               </Button>
             </ModalFooter>

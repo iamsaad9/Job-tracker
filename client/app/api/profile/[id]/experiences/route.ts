@@ -3,58 +3,124 @@ import connectDB from "@/app/config/dbConfig";
 import UserProfile from "@/app/models/UserProfile";
 import { getServerSession } from "@/app/lib/auth";
 
-// Define the Session shape
-interface UserSession {
-  userId: string;
-}
-
-// Define the shape of a single Experience entry
-interface ExperienceEntry {
-  title: string;
-  company: string;
-  location?: string;
-  from: Date;
-  to?: Date;
-  current?: boolean;
-  description?: string;
-}
-export async function PUT(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    
-    // 1. Get Session with explicit type
-    const session: UserSession | null = await getServerSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const session = await getServerSession();
+    if (!session) return NextResponse.json({ success: false }, { status: 401 });
 
-    // 2. Parse and type the body
-    const body: ExperienceEntry = await req.json();
-    
-    if (!body || !body.title || !body.company) {
-      return NextResponse.json(
-        { success: false, message: "Required experience fields missing" },
-        { status: 400 }
-      );
-    }
+    const body = await req.json();
+    // For POST, we don't need an experienceId, we just push the whole body
+    const { ...experienceForm } = body; 
 
-    // 3. Atomic Update
-    // We use $push with $position: 0 to simulate an 'unshift' in MongoDB
     const profile = await UserProfile.findOneAndUpdate(
       { user: session.userId },
       { 
         $push: { 
-          experience: { 
-            $each: [body], 
-            $position: 0 
+          experience: { $each: [experienceForm], $position: 0 } 
+        } 
+      },
+      { new: true, runValidators: true }
+    );
+
+    return NextResponse.json({ success: true, data: profile });
+  } catch (error: unknown) {
+    console.error("Signup Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    await connectDB();
+    
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    // 1. Parse the body exactly as you're sending it
+    const body = await req.json();
+    
+    // Extract experienceId, and gather the rest of the fields into updateData
+    const { experienceId, ...updateData } = body;
+
+    if (!experienceId) {
+      return NextResponse.json(
+        { success: false, message: "Experience ID is required for updates" },
+        { status: 400 }
+      );
+    }
+
+    /**
+     * 2. Atomic Update
+     * We find the profile belonging to the user that contains the specific experience ID.
+     * We then use the positional operator ($) to update ONLY that entry.
+     */
+    const profile = await UserProfile.findOneAndUpdate(
+      { 
+        user: session.userId, 
+        "experience._id": experienceId 
+      },
+      { 
+        $set: { 
+          // The "$" operator points to the index of the experience found above
+          "experience.$": { 
+            ...updateData, 
+            _id: experienceId // Keep the ID consistent
           } 
         } 
       },
       { new: true, runValidators: true }
+    );
+
+    if (!profile) {
+      return NextResponse.json(
+        { success: false, message: "Profile or Experience entry not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: profile });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    // 1. Get the experienceId from the body
+    const { experienceId } = await req.json();
+
+    if (!experienceId) {
+      return NextResponse.json(
+        { success: false, message: "Experience ID is required" },
+        { status: 400 }
+      );
+    }
+
+    /**
+     * 2. Atomic Removal
+     * $pull removes any element from an array that matches the condition.
+     */
+    const profile = await UserProfile.findOneAndUpdate(
+      { user: session.userId },
+      { 
+        $pull: { 
+          experience: { _id: experienceId } 
+        } 
+      },
+      { new: true } // Return the updated profile so the UI can refresh
     );
 
     if (!profile) {
@@ -64,15 +130,14 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, data: profile });
+    return NextResponse.json({ 
+      success: true, 
+      message: "Experience deleted", 
+      data: profile 
+    });
 
   } catch (error) {
-    // 4. Handle error strictly using Type Guard
     const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
-    
-    return NextResponse.json(
-      { success: false, error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }

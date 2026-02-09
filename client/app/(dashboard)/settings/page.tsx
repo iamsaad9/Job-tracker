@@ -13,8 +13,11 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
+  Toast,
+  addToast,
 } from "@heroui/react";
 import { Eye, EyeOff } from "lucide-react";
+import { useUser } from "@/app/hooks/useUser";
 
 const SettingsPage: React.FC = () => {
   const [passwordForm, setPasswordForm] = useState({
@@ -23,21 +26,40 @@ const SettingsPage: React.FC = () => {
     confirmPassword: "",
   });
 
+  const { user } = useUser();
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
+  const [emailForm, setEmailForm] = useState({
+    newEmail: user?.email || "",
+    password: "",
+  });
+  const [emailLoading, setEmailLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showCurrentEmail, setShowCurrentEmail] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const deleteModal = useDisclosure();
 
+  // Calculate password strength score (0-5)
+  const calculatePasswordStrength = (pwd: string): number => {
+    let strength = 0;
+
+    if (pwd.length >= 8) strength++;
+    if (pwd.length >= 12) strength++;
+    if (/[a-z]/.test(pwd)) strength++;
+    if (/[A-Z]/.test(pwd)) strength++;
+    if (/[0-9]/.test(pwd)) strength++;
+    // Check for special characters - any character that's not alphanumeric or space
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g.test(pwd)) strength++;
+
+    return strength;
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
     // Validation
     if (passwordForm.newPassword.length < 8) {
@@ -70,7 +92,12 @@ const SettingsPage: React.FC = () => {
       const json = await response.json();
 
       if (response.ok && json.success) {
-        setSuccess("Password changed successfully!");
+        addToast({
+          title: "Password Updated",
+          description: "Your password has been updated successfully.",
+          color: "success",
+          variant: "bordered",
+        });
         setPasswordForm({
           currentPassword: "",
           newPassword: "",
@@ -117,6 +144,37 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/change-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update email");
+
+      addToast({
+        title: "Email Updated",
+        description: "Your email address has been updated successfully.",
+        color: "success",
+        variant: "bordered",
+      });
+
+      setEmailForm({ newEmail: "", password: "" });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update email";
+      setError(message);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -130,137 +188,388 @@ const SettingsPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Security Section */}
+        {/* Security Section - Password */}
         <Card className="bg-foreground/5 border border-foreground/10 mb-6">
-          <CardHeader className="p-6 pb-4">
+          <CardHeader className="p-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-xl">
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-2xl">
                 🔒
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Security</h2>
-                <p className="text-foreground/60 text-sm">
-                  Update your password and secure your account
+                <h2 className="text-xl font-bold text-foreground">
+                  Change Password
+                </h2>
+                <p className="text-foreground/60 text-sm mt-0.5">
+                  Update your password to keep your account secure
                 </p>
               </div>
             </div>
           </CardHeader>
-          <CardBody className="p-6 pt-0">
-            {error && (
-              <div className="bg-danger/10 border border-danger/20 rounded-lg p-3 mb-4">
-                <p className="text-danger text-sm">{error}</p>
+
+          <Divider className="bg-foreground/10" />
+
+          <CardBody className="p-6">
+            {user?.provider === "google" ? (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex items-start gap-3">
+                <span className="text-2xl">ℹ️</span>
+                <div>
+                  <p className="text-foreground font-medium mb-1">
+                    Google Account
+                  </p>
+                  <p className="text-foreground/70 text-sm">
+                    You signed in with Google. To change your password, please
+                    visit your{" "}
+                    <a
+                      href="https://myaccount.google.com/security"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline font-medium"
+                    >
+                      Google Account Settings
+                    </a>
+                    .
+                  </p>
+                </div>
               </div>
-            )}
-
-            {success && (
-              <div className="bg-success/10 border border-success/20 rounded-lg p-3 mb-4">
-                <p className="text-success text-sm">{success}</p>
-              </div>
-            )}
-
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <Input
-                label="Current Password"
-                type={showCurrentPassword ? "text" : "password"}
-                value={passwordForm.currentPassword}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    currentPassword: e.target.value,
-                  })
-                }
-                isRequired
-                classNames={{
-                  label: "text-foreground",
-                  input: "text-foreground",
-                }}
-                endContent={
-                  <button
-                    className="focus:outline-none self-center cursor-pointer"
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
-                  </button>
-                }
-              />
-
-              <Input
-                label="New Password"
-                type={showNewPassword ? "text" : "password"}
-                value={passwordForm.newPassword}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    newPassword: e.target.value,
-                  })
-                }
-                isRequired
-                description="Must be at least 8 characters"
-                classNames={{
-                  label: "text-foreground",
-                  input: "text-foreground",
-                }}
-                endContent={
-                  <button
-                    className="focus:outline-none self-center cursor-pointer"
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                  >
-                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                }
-              />
-
-              <Input
-                label="Confirm New Password"
-                type={showConfirmPassword ? "text" : "password"}
-                value={passwordForm.confirmPassword}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    confirmPassword: e.target.value,
-                  })
-                }
-                isRequired
-                classNames={{
-                  label: "text-foreground",
-                  input: "text-foreground",
-                }}
-                endContent={
-                  <button
-                    className="focus:outline-none self-center cursor-pointer"
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
-                  </button>
-                }
-              />
-
-              <div className="flex justify-end pt-2">
-                <Button
-                  color="primary"
-                  type="submit"
-                  isLoading={loading}
-                  isDisabled={
-                    !passwordForm.currentPassword ||
-                    !passwordForm.newPassword ||
-                    !passwordForm.confirmPassword
+            ) : (
+              <form onSubmit={handlePasswordChange} className="space-y-5">
+                <Input
+                  label="Current Password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={passwordForm.currentPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      currentPassword: e.target.value,
+                    })
                   }
-                >
-                  Change Password
-                </Button>
+                  isRequired
+                  classNames={{
+                    label: "text-foreground font-medium",
+                    input: "text-foreground",
+                  }}
+                  endContent={
+                    <button
+                      className="focus:outline-none text-foreground/60 hover:text-foreground transition-colors"
+                      type="button"
+                      onClick={() =>
+                        setShowCurrentPassword(!showCurrentPassword)
+                      }
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  }
+                />
+
+                <Input
+                  label="New Password"
+                  type={showNewPassword ? "text" : "password"}
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      newPassword: e.target.value,
+                    })
+                  }
+                  isRequired
+                  description="Must be at least 8 characters long"
+                  classNames={{
+                    label: "text-foreground font-medium",
+                    input: "text-foreground",
+                    description: "text-foreground/50 text-xs",
+                  }}
+                  endContent={
+                    <button
+                      className="focus:outline-none text-foreground/60 hover:text-foreground transition-colors"
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  }
+                />
+
+                <Input
+                  label="Confirm New Password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  isRequired
+                  classNames={{
+                    label: "text-foreground font-medium",
+                    input: "text-foreground",
+                  }}
+                  endContent={
+                    <button
+                      className="focus:outline-none text-foreground/60 hover:text-foreground transition-colors"
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  }
+                />
+
+                {/* Password strength indicator */}
+                {passwordForm.newPassword && (
+                  <div className="space-y-2 p-3 bg-foreground/5 rounded-lg border border-foreground/10">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-foreground/70">
+                        Password Strength:
+                      </p>
+                      <p
+                        className={`text-xs font-semibold ${
+                          calculatePasswordStrength(passwordForm.newPassword) <=
+                          2
+                            ? "text-danger"
+                            : calculatePasswordStrength(
+                                  passwordForm.newPassword,
+                                ) <= 4
+                              ? "text-warning"
+                              : "text-success"
+                        }`}
+                      >
+                        {calculatePasswordStrength(passwordForm.newPassword) <=
+                        2
+                          ? "Weak"
+                          : calculatePasswordStrength(
+                                passwordForm.newPassword,
+                              ) <= 4
+                            ? "Fair"
+                            : "Strong"}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3, 4].map((index) => (
+                        <div
+                          key={index}
+                          className={`h-2 flex-1 rounded transition-colors ${
+                            index <
+                            calculatePasswordStrength(passwordForm.newPassword)
+                              ? calculatePasswordStrength(
+                                  passwordForm.newPassword,
+                                ) <= 2
+                                ? "bg-danger"
+                                : calculatePasswordStrength(
+                                      passwordForm.newPassword,
+                                    ) <= 4
+                                  ? "bg-warning"
+                                  : "bg-success"
+                              : "bg-foreground/20"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs text-foreground/60">
+                      <p
+                        className={`flex items-center gap-2 ${
+                          /[a-z]/.test(passwordForm.newPassword)
+                            ? "text-success"
+                            : ""
+                        }`}
+                      >
+                        <span>
+                          {/[a-z]/.test(passwordForm.newPassword) ? "✓" : "○"}
+                        </span>{" "}
+                        Lowercase letter
+                      </p>
+                      <p
+                        className={`flex items-center gap-2 ${
+                          /[A-Z]/.test(passwordForm.newPassword)
+                            ? "text-success"
+                            : ""
+                        }`}
+                      >
+                        <span>
+                          {/[A-Z]/.test(passwordForm.newPassword) ? "✓" : "○"}
+                        </span>{" "}
+                        Uppercase letter
+                      </p>
+                      <p
+                        className={`flex items-center gap-2 ${
+                          /[0-9]/.test(passwordForm.newPassword)
+                            ? "text-success"
+                            : ""
+                        }`}
+                      >
+                        <span>
+                          {/[0-9]/.test(passwordForm.newPassword) ? "✓" : "○"}
+                        </span>{" "}
+                        Number
+                      </p>
+                      <p
+                        className={`flex items-center gap-2 ${
+                          /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g.test(
+                            passwordForm.newPassword,
+                          )
+                            ? "text-success"
+                            : ""
+                        }`}
+                      >
+                        <span>
+                          {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g.test(
+                            passwordForm.newPassword,
+                          )
+                            ? "✓"
+                            : "○"}
+                        </span>{" "}
+                        Special character
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    color="primary"
+                    type="submit"
+                    size="lg"
+                    isLoading={loading}
+                    isDisabled={
+                      !passwordForm.currentPassword ||
+                      !passwordForm.newPassword ||
+                      !passwordForm.confirmPassword
+                    }
+                    className="font-semibold"
+                  >
+                    {loading ? "Updating..." : "Update Password"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* Email Section */}
+        <Card className="bg-foreground/5 border border-foreground/10 mb-6">
+          <CardHeader className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center text-2xl">
+                📧
               </div>
-            </form>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  Email Address
+                </h2>
+                <p className="text-foreground/60 text-sm mt-0.5">
+                  Update the email address associated with your account
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+
+          <Divider className="bg-foreground/10" />
+
+          <CardBody className="p-6">
+            {user?.provider === "google" ? (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex items-start gap-3">
+                <span className="text-2xl">ℹ️</span>
+                <div>
+                  <p className="text-foreground font-medium mb-1">
+                    Google Account
+                  </p>
+                  <p className="text-foreground/70 text-sm">
+                    Your email is managed by Google and cannot be changed here.
+                    To update your email, please visit your{" "}
+                    <a
+                      href="https://myaccount.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline font-medium"
+                    >
+                      Google Account Settings
+                    </a>
+                    .
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleEmailChange} className="space-y-5">
+                <div className="bg-foreground/5 rounded-lg p-4 border border-foreground/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-foreground/60 text-sm font-medium">
+                      Current Email
+                    </span>
+                  </div>
+                  <p className="text-foreground font-medium">{user?.email}</p>
+                </div>
+
+                <Input
+                  label="New Email Address"
+                  type="email"
+                  value={emailForm.newEmail}
+                  onChange={(e) =>
+                    setEmailForm({ ...emailForm, newEmail: e.target.value })
+                  }
+                  isRequired
+                  classNames={{
+                    label: "text-foreground font-medium",
+                    input: "text-foreground",
+                  }}
+                />
+
+                <Input
+                  label="Confirm with Password"
+                  type={showCurrentEmail ? "text" : "password"}
+                  value={emailForm.password}
+                  onChange={(e) =>
+                    setEmailForm({ ...emailForm, password: e.target.value })
+                  }
+                  isRequired
+                  description="For security, please enter your password to confirm this change"
+                  classNames={{
+                    label: "text-foreground font-medium",
+                    input: "text-foreground",
+                    description: "text-foreground/50 text-xs",
+                  }}
+                  endContent={
+                    <button
+                      className="focus:outline-none text-foreground/60 hover:text-foreground transition-colors"
+                      type="button"
+                      onClick={() => setShowCurrentEmail(!showCurrentEmail)}
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  }
+                />
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    color="primary"
+                    type="submit"
+                    size="lg"
+                    isLoading={emailLoading}
+                    isDisabled={!emailForm.newEmail || !emailForm.password}
+                    className="font-semibold"
+                  >
+                    {emailLoading ? "Updating..." : "Update Email"}
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardBody>
         </Card>
 
@@ -287,8 +596,8 @@ const SettingsPage: React.FC = () => {
                     Delete Account
                   </h3>
                   <p className="text-foreground/70 text-sm">
-                    Permanently delete your account and all associated data.
-                    This action cannot be undone.
+                    Permanently delete your Trackee account and all associated
+                    data. This action cannot be undone.
                   </p>
                 </div>
                 <Button

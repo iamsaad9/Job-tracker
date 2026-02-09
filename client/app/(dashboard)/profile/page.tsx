@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardBody,
@@ -21,6 +21,7 @@ import {
   Tab,
 } from "@heroui/react";
 import { useUser } from "@/app/hooks/useUser";
+import { Pen, Plus, Trash2 } from "lucide-react";
 
 interface Experience {
   _id?: string;
@@ -78,6 +79,11 @@ const ProfilePage: React.FC = () => {
   const experienceModal = useDisclosure();
   const educationModal = useDisclosure();
   const skillsModal = useDisclosure();
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState({
+    title: "",
+    id: "",
+    status: false,
+  });
 
   // Form states
   const [basicInfoForm, setBasicInfoForm] = useState({
@@ -113,12 +119,16 @@ const ProfilePage: React.FC = () => {
 
   const [newSkills, setNewSkills] = useState("");
 
-  // Fetch profile
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  // Editing states
+  const [editingExperience, setEditingExperience] = useState<Experience | null>(
+    null,
+  );
+  const [editingEducation, setEditingEducation] = useState<Education | null>(
+    null,
+  );
 
-  const fetchProfile = async () => {
+  // Fetch profile
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -148,7 +158,11 @@ const ProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?._id]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSaveBasicInfo = async () => {
     setSaving(true);
@@ -180,15 +194,15 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/profile/${profile?._id}/experiences`, {
-        method: "PUT",
+      // If editingExperience exists, use PUT. If not, use POST.
+
+      const endpoint = `/api/profile/${profile?._id}/experiences`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...experienceForm,
-          startDate: new Date(experienceForm.startDate),
-          endDate: experienceForm.endDate
-            ? new Date(experienceForm.endDate)
-            : undefined,
         }),
       });
 
@@ -206,13 +220,68 @@ const ProfilePage: React.FC = () => {
           current: false,
           description: "",
         });
+        setEditingExperience(null);
       } else {
-        setError(json.message || "Failed to add experience");
+        setError(
+          json.message ||
+            `Failed to ${editingExperience ? "update" : "add"} experience`,
+        );
       }
     } catch (err: unknown) {
-      console.error("Error adding experience:", err);
-      setError("Failed to add experience");
+      console.error(
+        `Error ${editingExperience ? "updating" : "adding"} experience:`,
+        err,
+      );
+      setError(`Failed to ${editingExperience ? "update" : "add"} experience`);
     } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditExperience = (exp: Experience) => {
+    setEditingExperience(exp);
+    setExperienceForm({
+      title: exp.title,
+      company: exp.company,
+      location: exp.location || "",
+      startDate: exp.startDate
+        ? new Date(exp.startDate).toISOString().split("T")[0]
+        : "",
+      endDate: exp.endDate
+        ? new Date(exp.endDate).toISOString().split("T")[0]
+        : "",
+      current: exp.current,
+      description: exp.description || "",
+    });
+    experienceModal.onOpen();
+  };
+
+  const handleDeleteExperience = async (expId: string | undefined) => {
+    if (!expId) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/profile/${profile?._id}/experiences/`,
+        {
+          method: "DELETE",
+          body: JSON.stringify({ experienceId: expId }),
+        },
+      );
+
+      const json = await response.json();
+
+      if (response.ok && json.success) {
+        setProfile(json.data);
+      } else {
+        setError(json.message || "Failed to delete experience");
+      }
+    } catch (err: unknown) {
+      console.error("Error deleting experience:", err);
+      setError("Failed to delete experience");
+    } finally {
+      setShowRemoveConfirm({ title: "", id: "", status: false });
       setSaving(false);
     }
   };
@@ -221,11 +290,19 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/profile/${profile?._id}/educations`, {
-        method: "PUT",
+      // 1. Use PATCH for updates, PUT for adding new
+      const method = editingEducation ? "PATCH" : "PUT";
+
+      // 2. Consistent endpoint (only profile ID is dynamic in URL)
+      const endpoint = `/api/profile/${profile?._id}/educations`;
+
+      const response = await fetch(endpoint, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...educationForm,
+          // 3. Inject the ID into the JSON body
+          educationId: editingEducation?._id,
           startDate: new Date(educationForm.startDate),
           endDate: educationForm.endDate
             ? new Date(educationForm.endDate)
@@ -238,21 +315,145 @@ const ProfilePage: React.FC = () => {
       if (response.ok && json.success) {
         setProfile(json.data);
         educationModal.onClose();
-        setEducationForm({
-          degree: "",
-          institution: "",
-          startDate: "",
-          endDate: "",
-          grade: "",
-          description: "",
-        });
+        setEditingEducation(null);
       } else {
-        setError(json.message || "Failed to add education");
+        setError(
+          json.message ||
+            `Failed to ${editingEducation ? "update" : "add"} education`,
+        );
+      }
+    } catch (err) {
+      console.error("Education Error:", err);
+      setError("Failed to save education");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditEducation = (edu: Education) => {
+    setEditingEducation(edu);
+    setEducationForm({
+      degree: edu.degree,
+      institution: edu.institution,
+      startDate: edu.startDate
+        ? new Date(edu.startDate).toISOString().split("T")[0]
+        : "",
+      endDate: edu.endDate
+        ? new Date(edu.endDate).toISOString().split("T")[0]
+        : "",
+      grade: edu.grade || "",
+      description: edu.description || "",
+    });
+    educationModal.onOpen();
+  };
+
+  const handleDeleteEducation = async (eduId: string | undefined) => {
+    if (!eduId) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/profile/${profile?._id}/educations/`, {
+        method: "DELETE",
+        body: JSON.stringify({ educationId: eduId }),
+      });
+
+      const json = await response.json();
+
+      if (response.ok && json.success) {
+        setProfile(json.data);
+      } else {
+        setError(json.message || "Failed to delete education");
       }
     } catch (err: unknown) {
-      console.error("Error adding education:", err);
-      setError("Failed to add education");
+      console.error("Error deleting education:", err);
+      setError("Failed to delete education");
     } finally {
+      setShowRemoveConfirm({ title: "", id: "", status: false });
+      setSaving(false);
+    }
+  };
+
+  // Reset handlers for adding new items
+  const handleOpenAddExperience = () => {
+    setEditingExperience(null);
+    setExperienceForm({
+      title: "",
+      company: "",
+      location: "",
+      startDate: "",
+      endDate: "",
+      current: false,
+      description: "",
+    });
+    experienceModal.onOpen();
+  };
+
+  const handleOpenAddEducation = () => {
+    setEditingEducation(null);
+    setEducationForm({
+      degree: "",
+      institution: "",
+      startDate: "",
+      endDate: "",
+      grade: "",
+      description: "",
+    });
+    educationModal.onOpen();
+  };
+
+  // Modal close handlers to reset state
+  const handleCloseExperienceModal = () => {
+    setEditingExperience(null);
+    setExperienceForm({
+      title: "",
+      company: "",
+      location: "",
+      startDate: "",
+      endDate: "",
+      current: false,
+      description: "",
+    });
+    experienceModal.onClose();
+  };
+
+  const handleCloseEducationModal = () => {
+    setEditingEducation(null);
+    setEducationForm({
+      degree: "",
+      institution: "",
+      startDate: "",
+      endDate: "",
+      grade: "",
+      description: "",
+    });
+    educationModal.onClose();
+  };
+
+  const handleDeleteSkill = async (skillToDelete: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/profile/${profile?._id}/skills`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill: skillToDelete }),
+      });
+
+      const json = await response.json();
+
+      if (response.ok && json.success) {
+        if (profile) {
+          setProfile({ ...profile, skills: json.data });
+        }
+      } else {
+        setError(json.message || "Failed to delete skill");
+      }
+    } catch (err: unknown) {
+      console.error("Error deleting skill:", err);
+      setError("Failed to delete skill");
+    } finally {
+      setShowRemoveConfirm({ title: "", id: "", status: false });
       setSaving(false);
     }
   };
@@ -260,7 +461,7 @@ const ProfilePage: React.FC = () => {
   const handleAddSkills = async () => {
     const skillsArray = newSkills
       .split(",")
-      .map((s) => s.trim())
+      .map((s) => s.trim().toLowerCase()) // Normalize to lowercase to prevent "React" vs "react" duplicates
       .filter((s) => s.length > 0);
 
     if (skillsArray.length === 0) {
@@ -351,7 +552,7 @@ const ProfilePage: React.FC = () => {
                     size="sm"
                     onPress={basicInfoModal.onOpen}
                   >
-                    Edit Profile
+                    <Pen size={12} /> Edit Profile
                   </Button>
                 </div>
                 {profile.headline && (
@@ -464,7 +665,7 @@ const ProfilePage: React.FC = () => {
               <CardHeader className="flex justify-between items-center p-6">
                 <h2 className="text-2xl font-bold text-foreground">Skills</h2>
                 <Button color="primary" size="sm" onPress={skillsModal.onOpen}>
-                  + Add Skills
+                  <Plus size={12} /> Add Skills
                 </Button>
               </CardHeader>
               <CardBody className="p-6 pt-0">
@@ -476,6 +677,14 @@ const ProfilePage: React.FC = () => {
                         color="primary"
                         variant="flat"
                         size="md"
+                        onClose={() =>
+                          setShowRemoveConfirm({
+                            title: "Skill",
+                            id: skill || "",
+                            status: true,
+                          })
+                        }
+                        className="cursor-pointer"
                       >
                         {skill}
                       </Chip>
@@ -500,9 +709,9 @@ const ProfilePage: React.FC = () => {
                 <Button
                   color="primary"
                   size="sm"
-                  onPress={experienceModal.onOpen}
+                  onPress={handleOpenAddExperience}
                 >
-                  + Add Experience
+                  <Plus size={12} /> Add Experience
                 </Button>
               </CardHeader>
               <CardBody className="p-6 pt-0">
@@ -514,7 +723,7 @@ const ProfilePage: React.FC = () => {
                           <Divider className="my-6 bg-foreground/10" />
                         )}
                         <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
+                          <div className="shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
                             💼
                           </div>
                           <div className="flex-1">
@@ -541,6 +750,32 @@ const ProfilePage: React.FC = () => {
                               </p>
                             )}
                           </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              color="primary"
+                              onPress={() => handleEditExperience(exp)}
+                            >
+                              <Pen size={14} />
+                            </Button>
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              color="danger"
+                              onPress={() =>
+                                setShowRemoveConfirm({
+                                  title: "Experience",
+                                  id: exp._id || "",
+                                  status: true,
+                                })
+                              }
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -564,9 +799,9 @@ const ProfilePage: React.FC = () => {
                 <Button
                   color="primary"
                   size="sm"
-                  onPress={educationModal.onOpen}
+                  onPress={handleOpenAddEducation}
                 >
-                  + Add Education
+                  <Plus size={12} /> Add Education
                 </Button>
               </CardHeader>
               <CardBody className="p-6 pt-0">
@@ -578,7 +813,7 @@ const ProfilePage: React.FC = () => {
                           <Divider className="my-6 bg-foreground/10" />
                         )}
                         <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-2xl">
+                          <div className="shrink-0 w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-2xl">
                             🎓
                           </div>
                           <div className="flex-1">
@@ -602,6 +837,32 @@ const ProfilePage: React.FC = () => {
                                 {edu.description}
                               </p>
                             )}
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              color="primary"
+                              onPress={() => handleEditEducation(edu)}
+                            >
+                              <Pen size={14} />
+                            </Button>
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              color="danger"
+                              onPress={() =>
+                                setShowRemoveConfirm({
+                                  title: "Education",
+                                  id: edu._id || "",
+                                  status: true,
+                                })
+                              }
+                            >
+                              <Trash2 size={14} />
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -695,6 +956,7 @@ const ProfilePage: React.FC = () => {
                   label="Email"
                   type="email"
                   value={basicInfoForm.email}
+                  isDisabled
                   onChange={(e) =>
                     setBasicInfoForm({
                       ...basicInfoForm,
@@ -810,7 +1072,7 @@ const ProfilePage: React.FC = () => {
         {/* Experience Modal */}
         <Modal
           isOpen={experienceModal.isOpen}
-          onClose={experienceModal.onClose}
+          onClose={handleCloseExperienceModal}
           size="2xl"
           scrollBehavior="inside"
           classNames={{
@@ -822,7 +1084,9 @@ const ProfilePage: React.FC = () => {
         >
           <ModalContent>
             <ModalHeader className="text-foreground text-xl font-semibold">
-              Add Work Experience
+              {editingExperience
+                ? "Edit Work Experience"
+                : "Add Work Experience"}
             </ModalHeader>
             <ModalBody>
               <Input
@@ -949,7 +1213,7 @@ const ProfilePage: React.FC = () => {
             <ModalFooter>
               <Button
                 variant="light"
-                onPress={experienceModal.onClose}
+                onPress={handleCloseExperienceModal}
                 className="text-foreground"
               >
                 Cancel
@@ -964,7 +1228,7 @@ const ProfilePage: React.FC = () => {
                   !experienceForm.startDate
                 }
               >
-                Add Experience
+                {editingExperience ? "Update Experience" : "Add Experience"}
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -973,7 +1237,7 @@ const ProfilePage: React.FC = () => {
         {/* Education Modal */}
         <Modal
           isOpen={educationModal.isOpen}
-          onClose={educationModal.onClose}
+          onClose={handleCloseEducationModal}
           size="2xl"
           scrollBehavior="inside"
           classNames={{
@@ -985,7 +1249,7 @@ const ProfilePage: React.FC = () => {
         >
           <ModalContent>
             <ModalHeader className="text-foreground text-xl font-semibold">
-              Add Education
+              {editingEducation ? "Edit Education" : "Add Education"}
             </ModalHeader>
             <ModalBody>
               <Input
@@ -1092,7 +1356,7 @@ const ProfilePage: React.FC = () => {
             <ModalFooter>
               <Button
                 variant="light"
-                onPress={educationModal.onClose}
+                onPress={handleCloseEducationModal}
                 className="text-foreground"
               >
                 Cancel
@@ -1107,7 +1371,7 @@ const ProfilePage: React.FC = () => {
                   !educationForm.startDate
                 }
               >
-                Add Education
+                {editingEducation ? "Update Education" : "Add Education"}
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -1164,6 +1428,66 @@ const ProfilePage: React.FC = () => {
                 isDisabled={!newSkills.trim()}
               >
                 Add Skills
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Remove Confirmation Modal */}
+        <Modal
+          isOpen={showRemoveConfirm.status}
+          onClose={() =>
+            setShowRemoveConfirm({
+              ...showRemoveConfirm,
+              status: false,
+            })
+          }
+          size="md"
+          classNames={{
+            base: "bg-background border border-danger/30",
+            header: "border-b border-danger/20",
+            body: "py-6",
+            footer: "border-t border-danger/20",
+          }}
+        >
+          <ModalContent>
+            <ModalHeader className="text-danger text-xl font-semibold flex items-center gap-2">
+              <span className="text-2xl">⚠️</span>
+              Remove {showRemoveConfirm.title}
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-foreground">
+                Are you sure you want to remove this {showRemoveConfirm.title}{" "}
+                from your profile?
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="light"
+                onPress={() =>
+                  setShowRemoveConfirm({
+                    ...showRemoveConfirm,
+                    status: false,
+                  })
+                }
+                className="text-foreground"
+              >
+                Cancel
+              </Button>
+              <Button
+                color="danger"
+                isLoading={saving}
+                onPress={() => {
+                  if (showRemoveConfirm.title === "Education") {
+                    handleDeleteEducation(showRemoveConfirm.id);
+                  } else if (showRemoveConfirm.title === "Experience") {
+                    handleDeleteExperience(showRemoveConfirm.id);
+                  } else {
+                    handleDeleteSkill(showRemoveConfirm.id);
+                  }
+                }}
+              >
+                Confirm Removal
               </Button>
             </ModalFooter>
           </ModalContent>

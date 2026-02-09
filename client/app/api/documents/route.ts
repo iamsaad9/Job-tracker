@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("type");
 
     // 2. Define a typed query object
-    const query: unknown = { user: session.userId, isArchived: false };
+    const query: { user: string; isArchived: boolean; type?: string } = { user: session.userId, isArchived: false };
     if (type) query.type = type;
 
     const documents = await Documents.find(query).sort({ createdAt: -1 });

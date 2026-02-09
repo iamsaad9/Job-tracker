@@ -22,7 +22,7 @@ const user = await User.findOne({ email: cleanEmail });
  const token = jwt.sign(
   { userId: user._id.toString() }, // Ensure it's a string
   process.env.SECRET_KEY!, 
-  { expiresIn: "1h" }
+  { expiresIn: "1d" }
 );
 
     const response = NextResponse.json({ 
@@ -39,7 +39,7 @@ const user = await User.findOne({ email: cleanEmail });
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 1, // 1 hr in seconds
+      maxAge: 60 * 60 * 24, // 24 hr in seconds
       sameSite: "lax"
     });
 

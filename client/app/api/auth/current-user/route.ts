@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
-import { NextResponse, NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import User from "@/app/models/User";
 import connectDB from "@/app/config/dbConfig"; // Assuming you have this helper

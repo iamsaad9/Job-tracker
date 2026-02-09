@@ -1,5 +1,18 @@
 import mongoose from "mongoose";
-const userSchema = new mongoose.Schema(
+
+interface IUser {
+  name: string;
+  email: string;
+  password?: string;
+  roles?: string;
+  googleId?: string;
+  provider?: "local" | "google";
+  avatar?: string;
+  resetToken?: string;
+  resetTokenExpiry?: Date;
+}
+
+const userSchema = new mongoose.Schema<IUser>(
   {
     name: {
       type: String,
@@ -26,13 +39,21 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
     },
+    provider:{
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
     avatar: {
       type: String,
-      default: function () {
+      default: function (this: IUser) {
         return `https://ui-avatars.com/api/?name=${this.name.split(" ").join("+")}`;
       },
     },
+    resetToken: String,
+resetTokenExpiry: Date,
   },
+  
   { timestamps: true },
 );
 

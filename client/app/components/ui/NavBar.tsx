@@ -36,7 +36,7 @@ export default function Header() {
 
   return (
     <Navbar
-      className=" shadow-lg bg-gradient-to-br from-purple-600 to-blue-500"
+      className=" shadow-lg bg-linear-to-br from-purple-600 to-blue-500"
       maxWidth="2xl"
     >
       <NavbarBrand>

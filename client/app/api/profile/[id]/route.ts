@@ -18,7 +18,7 @@ interface IProfile {
 }
 
 // GET current profile (/api/profile)
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     await connectDB();
     

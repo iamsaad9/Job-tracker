@@ -35,8 +35,9 @@ export async function POST(req: NextRequest) {
       message: "User and Profile created successfully" 
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Signup Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
