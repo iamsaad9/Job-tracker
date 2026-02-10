@@ -43,6 +43,7 @@ const LoginPage: React.FC = () => {
       if (data.success) {
         router.push("/dashboard");
       } else {
+        setIsLoading(false); // Set to false only on failure
         addToast({
           title: "Error",
           description: data.message || "Login failed",
@@ -51,15 +52,14 @@ const LoginPage: React.FC = () => {
         });
       }
     } catch (err) {
+      setIsLoading(false); // Set to false only on error
       console.error("Auth error:", err);
       addToast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: "Server Error",
         color: "danger",
         variant: "bordered",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 

@@ -329,7 +329,7 @@ const DocumentsPage: React.FC = () => {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-2">
           <Chip
             variant={filterType === "all" ? "solid" : "bordered"}
             color={filterType === "all" ? "primary" : "default"}
@@ -524,6 +524,8 @@ const DocumentsPage: React.FC = () => {
           isOpen={isOpen}
           onClose={onClose}
           size="2xl"
+          backdrop="blur"
+          placement="top"
           classNames={{
             base: "bg-background border border-foreground/10",
             header: "border-b border-foreground/10",
@@ -674,6 +676,8 @@ const DocumentsPage: React.FC = () => {
 
         {/* View Document Modal */}
         <Modal
+          backdrop="blur"
+          placement="center"
           isOpen={showViewModal}
           onClose={() => {
             setShowViewModal(false);
@@ -830,6 +834,8 @@ const DocumentsPage: React.FC = () => {
 
         {/* Delete Confirmation Modal */}
         <Modal
+          backdrop="blur"
+          placement="center"
           isOpen={showDeleteConfirm}
           onClose={() => {
             setShowDeleteConfirm(false);
@@ -878,6 +884,8 @@ const DocumentsPage: React.FC = () => {
 
         {/* Usage alert Modal */}
         <Modal
+          backdrop="blur"
+          placement="center"
           isOpen={!!usageError}
           onClose={() => {
             setUsageError(null);

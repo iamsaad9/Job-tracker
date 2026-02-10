@@ -1192,6 +1192,8 @@ const JobTrackerHome: React.FC = () => {
             setEditJob(null);
           }}
           size="3xl"
+          backdrop="blur"
+          placement="top"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -1868,6 +1870,8 @@ const JobTrackerHome: React.FC = () => {
           isOpen={showViewModal}
           onClose={() => (setShowViewModal(false), setIsEditing(false))}
           size="3xl"
+          backdrop="blur"
+          placement="center"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -2258,6 +2262,8 @@ const JobTrackerHome: React.FC = () => {
         {/* Document Remove Confirmation Modal */}
         <Modal
           isOpen={showRemoveConfirm}
+          backdrop="blur"
+          placement="center"
           onClose={() => setShowRemoveConfirm(false)}
         >
           <ModalContent>
@@ -2312,6 +2318,8 @@ const JobTrackerHome: React.FC = () => {
 
         {/* Job Delete Confirmation Modal */}
         <Modal
+          backdrop="blur"
+          placement="center"
           isOpen={showDeleteConfirm}
           onClose={() => {
             setShowDeleteConfirm(false);

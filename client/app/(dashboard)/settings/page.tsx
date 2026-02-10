@@ -13,7 +13,6 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Toast,
   addToast,
 } from "@heroui/react";
 import { Eye, EyeOff } from "lucide-react";
@@ -652,6 +651,8 @@ const SettingsPage: React.FC = () => {
           isOpen={deleteModal.isOpen}
           onClose={deleteModal.onClose}
           size="lg"
+          backdrop="blur"
+          placement="center"
           classNames={{
             base: "bg-background border border-danger/30",
             header: "border-b border-danger/20",

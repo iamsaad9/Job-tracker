@@ -531,6 +531,14 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+            Profile
+          </h1>
+          <p className="text-foreground/60">Manage your profile information.</p>
+        </div>
+
         {/* Header Card */}
         <Card className="bg-foreground/5 border border-foreground/10 mb-6">
           <CardBody className="p-6 md:p-8">
@@ -544,12 +552,25 @@ const ProfilePage: React.FC = () => {
               />
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
-                  <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-                    {profile.name}
-                  </h1>
+                  <div className="flex flex-col justify-center gap-2">
+                    <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                      {profile.name}
+                    </h1>
+                    {profile.email && (
+                      <Chip
+                        variant="flat"
+                        color="primary"
+                        size="sm"
+                        startContent={<span>📧</span>}
+                      >
+                        {profile.email}
+                      </Chip>
+                    )}
+                  </div>
                   <Button
                     color="primary"
                     size="sm"
+                    className="my-3 md:m-0"
                     onPress={basicInfoModal.onOpen}
                   >
                     <Pen size={12} /> Edit Profile
@@ -566,16 +587,6 @@ const ProfilePage: React.FC = () => {
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {profile.email && (
-                    <Chip
-                      variant="flat"
-                      color="primary"
-                      size="sm"
-                      startContent={<span>📧</span>}
-                    >
-                      {profile.email}
-                    </Chip>
-                  )}
                   {profile.phone && (
                     <Chip
                       variant="flat"
@@ -884,6 +895,8 @@ const ProfilePage: React.FC = () => {
           isOpen={basicInfoModal.isOpen}
           onClose={basicInfoModal.onClose}
           size="3xl"
+          backdrop="blur"
+          placement="top"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -1074,6 +1087,8 @@ const ProfilePage: React.FC = () => {
           isOpen={experienceModal.isOpen}
           onClose={handleCloseExperienceModal}
           size="2xl"
+          backdrop="blur"
+          placement="top"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -1239,6 +1254,8 @@ const ProfilePage: React.FC = () => {
           isOpen={educationModal.isOpen}
           onClose={handleCloseEducationModal}
           size="2xl"
+          backdrop="blur"
+          placement="top"
           scrollBehavior="inside"
           classNames={{
             base: "bg-background border border-foreground/10",
@@ -1382,6 +1399,8 @@ const ProfilePage: React.FC = () => {
           isOpen={skillsModal.isOpen}
           onClose={skillsModal.onClose}
           size="lg"
+          backdrop="blur"
+          placement="center"
           classNames={{
             base: "bg-background border border-foreground/10",
             header: "border-b border-foreground/10",
@@ -1442,6 +1461,8 @@ const ProfilePage: React.FC = () => {
               status: false,
             })
           }
+          backdrop="blur"
+          placement="center"
           size="md"
           classNames={{
             base: "bg-background border border-danger/30",
