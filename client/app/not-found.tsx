@@ -79,12 +79,8 @@ const NotFoundPage: React.FC = () => {
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Oops! Page Not Found
           </h2>
-          <p className="text-lg text-foreground/70 mb-2 max-w-md mx-auto">
-            Looks like this job posting has been filled... or the page
-            you&apos;re looking for doesn&apos;t exist.
-          </p>
-          <p className="text-foreground/60 mb-8">
-            Error 404 - The page you requested could not be found
+          <p className="text-lg text-foreground/70 mb-2 max-w-md mx-auto mb-8">
+            Looks like the page you&apos;re looking for doesn&apos;t exist.
           </p>
 
           {/* Quick Actions */}

@@ -269,7 +269,7 @@ const HelpAndFeedbackPage: React.FC = () => {
           variant="underlined"
           classNames={{
             tabList:
-              "gap-6 w-full relative rounded-none p-0 border-b border-foreground/10",
+              "gap-x-6 gap-y-2 w-full relative rounded-none p-0 border-b border-foreground/10 flex-wrap",
             cursor: "w-full bg-primary",
             tab: "max-w-fit px-0 h-12",
             tabContent: "group-data-[selected=true]:text-primary",
@@ -278,6 +278,7 @@ const HelpAndFeedbackPage: React.FC = () => {
           {/* FAQ Tab */}
           <Tab
             key="faq"
+            textValue="Frequently Asked Questions"
             title={
               <div className="flex items-center gap-2">
                 <BookOpen size={18} />
@@ -349,6 +350,7 @@ const HelpAndFeedbackPage: React.FC = () => {
                         {category.questions.map((item, qIndex) => (
                           <AccordionItem
                             key={qIndex}
+                            textValue={item.q}
                             title={
                               <span className="font-semibold text-foreground">
                                 {item.q}
@@ -373,6 +375,7 @@ const HelpAndFeedbackPage: React.FC = () => {
           {/* Video Tutorials Tab */}
           <Tab
             key="tutorials"
+            textValue="Video Tutorials"
             title={
               <div className="flex items-center gap-2">
                 <Video size={18} />
@@ -431,6 +434,7 @@ const HelpAndFeedbackPage: React.FC = () => {
           {/* Contact & Feedback Tab */}
           <Tab
             key="feedback"
+            textValue="Send Feedback"
             title={
               <div className="flex items-center gap-2">
                 <MessageCircle size={18} />
