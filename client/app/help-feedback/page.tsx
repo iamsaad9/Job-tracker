@@ -27,6 +27,7 @@ import {
   TrendingUp,
   CheckCircle,
   Send,
+  X,
 } from "lucide-react";
 
 interface Tutorials {
@@ -255,6 +256,13 @@ const HelpAndFeedbackPage: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             size="lg"
             startContent={<Search className="text-foreground/40" size={20} />}
+            endContent={
+              <X
+                className="text-foreground/40 cursor-pointer"
+                size={16}
+                onClick={() => setSearchQuery("")}
+              />
+            }
             classNames={{
               input: "text-foreground",
               inputWrapper: "bg-foreground/5 border-foreground/10",
@@ -288,34 +296,36 @@ const HelpAndFeedbackPage: React.FC = () => {
           >
             <div className="py-6 space-y-6">
               {/* Quick Tips */}
-              <Card className="bg-primary/5 border border-primary/10">
-                <CardHeader>
-                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <CheckCircle className="text-primary" size={20} />
-                    Quick Tips
-                  </h3>
-                </CardHeader>
-                <CardBody>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {quickTips.map((tip, index) => (
-                      <div
-                        key={index}
-                        className="flex gap-3 p-3 bg-background rounded-lg"
-                      >
-                        {tip.icon}
-                        <div>
-                          <h4 className="font-semibold text-foreground text-sm mb-1">
-                            {tip.title}
-                          </h4>
-                          <p className="text-foreground/60 text-xs">
-                            {tip.description}
-                          </p>
+              {searchQuery === "" && (
+                <Card className="bg-primary/5 border border-primary/10">
+                  <CardHeader>
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      <CheckCircle className="text-primary" size={20} />
+                      Quick Tips
+                    </h3>
+                  </CardHeader>
+                  <CardBody>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {quickTips.map((tip, index) => (
+                        <div
+                          key={index}
+                          className="flex gap-3 p-3 bg-background rounded-lg"
+                        >
+                          {tip.icon}
+                          <div>
+                            <h4 className="font-semibold text-foreground text-sm mb-1">
+                              {tip.title}
+                            </h4>
+                            <p className="text-foreground/60 text-xs">
+                              {tip.description}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardBody>
-              </Card>
+                      ))}
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
 
               {/* FAQ Accordions by Category */}
               {filteredFaqs.length === 0 ? (
