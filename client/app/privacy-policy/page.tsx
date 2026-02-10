@@ -482,10 +482,10 @@ const PrivacyPolicyPage: React.FC = () => {
             <p className="text-foreground/80 text-sm">
               To exercise any of these rights, please contact us at{" "}
               <a
-                href="mailto:privacy@jobtracker.com"
+                href="mailto:lonetech09@gmail.com"
                 className="text-primary font-medium hover:underline"
               >
-                privacy@jobtracker.com
+                lonetech09@gmail.com
               </a>
               . We will respond to your request within 30 days.
             </p>
@@ -622,10 +622,10 @@ const PrivacyPolicyPage: React.FC = () => {
                   <div>
                     <p className="text-foreground/60 text-xs">Email</p>
                     <a
-                      href="mailto:privacy@jobtracker.com"
+                      href="mailto:lonetech09@gmail.com"
                       className="text-foreground font-medium hover:text-primary"
                     >
-                      privacy@jobtracker.com
+                      lonetech09@gmail.com
                     </a>
                   </div>
                 </div>

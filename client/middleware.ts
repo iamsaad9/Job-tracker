@@ -43,7 +43,7 @@ const ip = headerList.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1"
 
   // Redirect if trying to access protected page without token
   if (isProtectedRoute && !token) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   if (token) {
@@ -57,7 +57,7 @@ const ip = headerList.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1"
       }
     } catch (err) {
       if (isProtectedRoute) {
-        const response = NextResponse.redirect(new URL("/login", req.url));
+        const response = NextResponse.redirect(new URL("/", req.url));
         response.cookies.delete("token");
         return response;
       }

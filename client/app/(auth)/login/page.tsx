@@ -162,43 +162,41 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className=" h-screen w-full overflow-hidden flex bg-white">
+    <div className=" h-screen w-full overflow-hidden flex bg-linear-to-br from-primary/10 via-secondary/10 to-success/10">
       {/* Left Side - Artistic Image */}
       <div className="hidden lg:flex lg:w-1/2 bg-linear-to-b from-black to-silver-500 m-5 overflow-hidden rounded-4xl">
         <AutoSlideshow />
       </div>
 
       {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center lg:justify-start p-8 lg:p-16 xl:ml-20">
+      <div className="w-full lg:w-1/2  flex items-center justify-center lg:justify-start p-8 lg:p-16 xl:ml-20">
         <AnimatePresence mode="wait">
           <div className="w-full max-w-md">
             <div className="flex items-center justify-start gap-5 ">
-              {/* Back Arrow (only on signup) */}
-
               {/* Heading */}
               <div className="mb-8 relative">
                 {isSignup && (
                   <button
                     onClick={() => setIsSignup(false)}
-                    className="mb-5 p-2 hover:bg-gray-100 rounded-lg transition-colors inline-flex md:absolute md:-left-15 md:top-1/2 md:-translate-y-1/2 cursor-pointer"
+                    className="mb-5 p-2 hover:bg-white/10 rounded-lg transition-colors inline-flex md:absolute md:-left-15 md:top-1/2 md:-translate-y-1/2 cursor-pointer"
                   >
-                    <ArrowLeft size={24} className="text-gray-700" />
+                    <ArrowLeft size={24} className="text-foreground" />
                   </button>
                 )}
                 <div className="flex flex-col">
                   {!isSignup && (
                     <Image
-                      src={"/assets/logo_black.png"}
+                      src={"/assets/logo.png"}
                       alt="dark_logo"
                       className="h-14 rounded-none mb-10 bg-transparent"
                     />
                   )}
-                  <h1 className="text-4xl font-semibold text-gray-900 mb-2">
+                  <h1 className="text-4xl font-semibold text-foreground mb-2">
                     {isSignup
                       ? "Start to Your Journey"
                       : "Back to Your Journey"}
                   </h1>
-                  <p className="text-gray-600">
+                  <p className="text-foreground/60">
                     {isSignup ? (
                       <>
                         Join thousands of professionals advancing their careers
@@ -208,7 +206,7 @@ const LoginPage: React.FC = () => {
                         Don&apos;t have an account?{" "}
                         <button
                           onClick={() => setIsSignup(true)}
-                          className="text-gray-900 font-medium cursor-pointer hover:underline"
+                          className="text-foreground/80 font-medium cursor-pointer hover:underline"
                         >
                           Sign up
                         </button>
@@ -237,7 +235,7 @@ const LoginPage: React.FC = () => {
                 {/* First Name & Last Name */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-700 mb-2">
+                    <label className="block text-sm text-foreground/90  mb-2">
                       First Name
                     </label>
                     <input
@@ -250,12 +248,12 @@ const LoginPage: React.FC = () => {
                           firstName: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                      className="w-full px-4 py-3  border border-gray-500 rounded-full text-foreground/80 placeholder-gray-400 focus:outline-none focus:border-primary transition-colors"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-700 mb-2">
+                    <label className="block text-sm text-foreground/90  mb-2">
                       Last Name
                     </label>
                     <input
@@ -268,7 +266,7 @@ const LoginPage: React.FC = () => {
                           lastName: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                      className="w-full px-4 py-3  border border-gray-500 rounded-full text-foreground/80 placeholder-gray-400 focus:outline-none focus:border-primary transition-colors"
                       required
                     />
                   </div>
@@ -276,7 +274,7 @@ const LoginPage: React.FC = () => {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">
+                  <label className="block text-sm text-foreground/90  mb-2">
                     Email Address
                   </label>
                   <input
@@ -286,14 +284,14 @@ const LoginPage: React.FC = () => {
                     onChange={(e) =>
                       setSignUpData({ ...signUpData, email: e.target.value })
                     }
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                    className="w-full px-4 py-3  border border-gray-500 rounded-full text-foreground/80 placeholder-gray-400 focus:outline-none focus:border-primary transition-colors"
                     required
                   />
                 </div>
 
                 {/* Password */}
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">
+                  <label className="block text-sm text-foreground/90  mb-2">
                     Password
                   </label>
                   <div className="relative">
@@ -307,7 +305,7 @@ const LoginPage: React.FC = () => {
                           password: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors pr-12"
+                      className="w-full px-4 py-3  border border-gray-500 rounded-full text-foreground/80 placeholder-gray-400 focus:outline-none focus:border-primary transition-colors pr-12"
                       required
                     />
                     <button
@@ -323,7 +321,7 @@ const LoginPage: React.FC = () => {
                   {signUpData.password && (
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium text-gray-600">
+                        <p className="text-xs font-medium text-foreground/90">
                           Password Strength:
                         </p>
                         <p
@@ -366,7 +364,7 @@ const LoginPage: React.FC = () => {
                           />
                         ))}
                       </div>
-                      <div className="space-y-1 text-xs text-gray-600 mt-2">
+                      <div className="space-y-1 text-xs text-foreground/70 mt-2 flex gap-5">
                         <p
                           className={`flex items-center gap-2 ${
                             /[a-z]/.test(signUpData.password)
@@ -429,7 +427,7 @@ const LoginPage: React.FC = () => {
                 {/* Create Account Button */}
                 <button
                   type="submit"
-                  className="w-full py-3 m-0 bg-linear-to-b from-black to-black/70 text-white hover:shadow-lg font-medium rounded-xl cursor-pointer transition-all disabled:opacity-200 disabled:cursor-not-allowed"
+                  className="w-full py-3 m-0 bg-linear-to-br from-purple-600 to-blue-500 hover:scale-102 text-white hover:shadow-lg font-medium rounded-xl cursor-pointer transition-all disabled:opacity-200 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -442,7 +440,7 @@ const LoginPage: React.FC = () => {
                 </button>
 
                 {/* Terms Checkbox */}
-                <label className="flex mt-3 items-center gap-2 cursor-pointer">
+                {/* <label className="flex mt-3 items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={signUpData.agreedToTerms}
@@ -460,15 +458,15 @@ const LoginPage: React.FC = () => {
                       Terms & Condition
                     </a>
                   </span>
-                </label>
+                </label> */}
 
                 {/* Divider */}
-                <div className="relative my-3">
+                <div className="relative my-3 flex justify-center items-center gap-5">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-200"></div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">or</span>
+                  <div className="relative bg-gray-950 flex justify-center text-sm">
+                    <span className="px-4 bg-transparent white">or</span>
                   </div>
                 </div>
 
@@ -476,7 +474,7 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  className="flex w-full items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors shadow"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 bg-gray-200 hover:bg-gray-300 cursor-pointer transition-colors shadow"
                 >
                   <FcGoogle size={20} />
                   <span className="font-medium text-sm">
@@ -500,7 +498,7 @@ const LoginPage: React.FC = () => {
               >
                 {/* Email */}
                 <div>
-                  <label className="block text-sm text-gray-700 mb-2">
+                  <label className="block text-sm text-foreground/90 mb-2">
                     Email Address
                   </label>
                   <input
@@ -510,7 +508,7 @@ const LoginPage: React.FC = () => {
                     onChange={(e) =>
                       setLoginData({ ...loginData, email: e.target.value })
                     }
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+                    className="w-full px-4 py-3  border border-gray-500 rounded-full text-foreground/80 placeholder-gray-400 focus:outline-none focus:border-primary transition-colors"
                     required
                   />
                 </div>
@@ -518,7 +516,7 @@ const LoginPage: React.FC = () => {
                 {/* Password */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm text-gray-700">
+                    <label className="block text-sm text-foreground/90">
                       Password
                     </label>
                   </div>
@@ -530,7 +528,7 @@ const LoginPage: React.FC = () => {
                       onChange={(e) =>
                         setLoginData({ ...loginData, password: e.target.value })
                       }
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors pr-12"
+                      className="w-full px-4 py-3  border border-gray-500 rounded-full text-foreground/80 placeholder-gray-400 focus:outline-none focus:border-primary transition-colors pr-12"
                       required
                     />
                     <button
@@ -544,7 +542,7 @@ const LoginPage: React.FC = () => {
 
                   <Link
                     href="/reset-password"
-                    className="text-sm  text-gray-600 hover:text-gray-900 hover:underline block mt-3"
+                    className="text-sm  rounded-xl text-primary hover:underline  inline-block mt-5"
                   >
                     Forgot password?
                   </Link>
@@ -553,7 +551,7 @@ const LoginPage: React.FC = () => {
                 {/* Login Button */}
                 <button
                   type="submit"
-                  className="w-full py-3 m-0 bg-linear-to-b from-black to-black/70 text-white hover:shadow-lg font-medium rounded-xl cursor-pointer transition-all disabled:opacity-200 disabled:cursor-not-allowed"
+                  className="w-full py-3 m-0 bg-linear-to-br from-purple-600 to-blue-500 hover:scale-102 text-white hover:shadow-lg font-medium rounded-xl cursor-pointer transition-all disabled:opacity-200 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -566,12 +564,12 @@ const LoginPage: React.FC = () => {
                 </button>
 
                 {/* Divider */}
-                <div className="relative my-3">
+                <div className="relative my-3 flex justify-center items-center gap-5">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-200"></div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">or</span>
+                  <div className="relative bg-gray-950 flex justify-center text-sm">
+                    <span className="px-4 bg-transparent white">or</span>
                   </div>
                 </div>
 
@@ -579,7 +577,7 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  className="flex w-full items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors shadow"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 bg-gray-200 hover:bg-gray-300 cursor-pointer transition-colors shadow"
                 >
                   <FcGoogle size={20} />
                   <span className="font-medium text-sm">
@@ -588,7 +586,7 @@ const LoginPage: React.FC = () => {
                 </button>
               </motion.form>
             )}
-            <p className="text-center text-sm text-gray-600 mt-5 animate-fade-in delay-500">
+            <p className="text-center text-sm text-foreground mt-5 animate-fade-in delay-500">
               Protected by reCAPTCHA and subject to the{" "}
               <a
                 href="/privacy-policy"
