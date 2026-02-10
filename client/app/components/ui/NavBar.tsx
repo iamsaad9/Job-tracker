@@ -121,7 +121,11 @@ export default function Header() {
               </div>
             </DropdownItem>
 
-            <DropdownItem key="help_and_feedback">Help & Feedback</DropdownItem>
+            <DropdownItem key="help_and_feedback">
+              <Link className="text-foreground text-sm" href={"/help-feedback"}>
+                Help & Feedback
+              </Link>
+            </DropdownItem>
             <DropdownItem
               key="logout"
               color="danger"

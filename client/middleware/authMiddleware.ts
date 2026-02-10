@@ -36,7 +36,7 @@ export const authMiddleware = (handler: AuthenticatedHandler) => {
       authReq.user = { id: decoded.userId };
 
       return handler(authReq);
-    } catch (err) {
+    } catch (error) {
       return NextResponse.json(
         { success: false, message: "Invalid or expired token" },
         { status: 401 }

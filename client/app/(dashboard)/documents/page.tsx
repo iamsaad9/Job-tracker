@@ -320,7 +320,8 @@ const DocumentsPage: React.FC = () => {
           </div>
           <Button
             color="primary"
-            size="lg"
+            size="md"
+            variant="flat"
             onPress={onOpen}
             className="font-semibold"
           >
@@ -836,6 +837,7 @@ const DocumentsPage: React.FC = () => {
         <Modal
           backdrop="blur"
           placement="center"
+          isDismissable={false}
           isOpen={showDeleteConfirm}
           onClose={() => {
             setShowDeleteConfirm(false);

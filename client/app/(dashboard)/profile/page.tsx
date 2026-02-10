@@ -570,6 +570,7 @@ const ProfilePage: React.FC = () => {
                   <Button
                     color="primary"
                     size="sm"
+                    variant="flat"
                     className="my-3 md:m-0"
                     onPress={basicInfoModal.onOpen}
                   >
@@ -675,7 +676,12 @@ const ProfilePage: React.FC = () => {
             <Card className="bg-foreground/5 border border-foreground/10 mt-4">
               <CardHeader className="flex justify-between items-center p-6">
                 <h2 className="text-2xl font-bold text-foreground">Skills</h2>
-                <Button color="primary" size="sm" onPress={skillsModal.onOpen}>
+                <Button
+                  color="primary"
+                  size="sm"
+                  onPress={skillsModal.onOpen}
+                  variant="flat"
+                >
                   <Plus size={12} /> Add Skills
                 </Button>
               </CardHeader>
@@ -721,6 +727,7 @@ const ProfilePage: React.FC = () => {
                   color="primary"
                   size="sm"
                   onPress={handleOpenAddExperience}
+                  variant="flat"
                 >
                   <Plus size={12} /> Add Experience
                 </Button>
@@ -810,6 +817,7 @@ const ProfilePage: React.FC = () => {
                 <Button
                   color="primary"
                   size="sm"
+                  variant="flat"
                   onPress={handleOpenAddEducation}
                 >
                   <Plus size={12} /> Add Education

@@ -34,6 +34,7 @@ import {
   SelectItem,
   Divider,
   Checkbox,
+  addToast,
 } from "@heroui/react";
 import { DynamicIcon } from "@/app/components/ui/DynamicIcons";
 import { Upload, FileText } from "lucide-react";
@@ -311,6 +312,62 @@ const JobTrackerHome: React.FC = () => {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  const downloadCSV = () => {
+    // Define CSV headers
+    const headers = [
+      "Title",
+      "Company",
+      "Status",
+      "Country",
+      "City",
+      "Job URL",
+      "Application Date",
+      "Description",
+      "Notes",
+      "Has CV",
+      "Has Cover Letter",
+      "Has Portfolio",
+    ];
+
+    // Convert jobs data to CSV rows
+    const rows = jobs.map((job) => [
+      job.title || "",
+      job.company || "",
+      statusConfig[job.status as JobStatus]?.title || job.status,
+      job.country || "",
+      job.city || "",
+      job.jobUrl || "",
+      new Date(job.applicationDate).toLocaleDateString(),
+      (job.description || "").replace(/"/g, '""'), // Escape quotes
+      (job.notes || "").replace(/"/g, '""'), // Escape quotes
+      job.documents?.cv ? "Yes" : "No",
+      job.documents?.coverLetter ? "Yes" : "No",
+      job.documents?.portfolio ? "Yes" : "No",
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `job-applications-${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDownloadJobDocument = async (docId: string, fileName: string) => {
     try {
       const response = await fetch(`/api/documents/${docId}/download`);
@@ -422,6 +479,14 @@ const JobTrackerHome: React.FC = () => {
       });
 
       const json = await response.json();
+
+      if (response.status === 429) {
+        addToast({
+          title: "Rate Limit Exceeded",
+          description: "Whoa there! You're sending requests too fast.",
+        });
+      }
+
       if (response.ok) {
         const updated = json?.data || { ...draggedJob, status };
         setJobs(
@@ -783,10 +848,24 @@ const JobTrackerHome: React.FC = () => {
       <div className="max-w-450 mx-auto">
         {/* Header */}
         <header className="text-foreground mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Dashboard</h1>
-          <p className="text-foreground/60">
-            Your personal job application tracker.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">Dashboard</h1>
+              <p className="text-foreground/60">
+                Your personal job application tracker.
+              </p>
+            </div>
+            <Button
+              color="primary"
+              variant="flat"
+              className="font-semibold"
+              startContent={<Download size={18} />}
+              onPress={downloadCSV}
+              aria-label="Download CSV"
+            >
+              Export CSV
+            </Button>
+          </div>
         </header>
 
         {loading ? (
@@ -838,6 +917,7 @@ const JobTrackerHome: React.FC = () => {
                   <Button
                     color="primary"
                     size="lg"
+                    variant="flat"
                     className="font-semibold"
                     aria-label="Add first job application"
                     onPress={() => openModal("wishlist")}
@@ -2264,6 +2344,7 @@ const JobTrackerHome: React.FC = () => {
           isOpen={showRemoveConfirm}
           backdrop="blur"
           placement="center"
+          isDismissable={false}
           onClose={() => setShowRemoveConfirm(false)}
         >
           <ModalContent>
@@ -2321,6 +2402,7 @@ const JobTrackerHome: React.FC = () => {
           backdrop="blur"
           placement="center"
           isOpen={showDeleteConfirm}
+          isDismissable={false}
           onClose={() => {
             setShowDeleteConfirm(false);
             setJobToDelete(null);

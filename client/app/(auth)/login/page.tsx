@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addToast, Spinner } from "@heroui/react";
+import { addToast, Image, Spinner } from "@heroui/react";
 import { FcGoogle } from "react-icons/fc";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -170,44 +170,57 @@ const LoginPage: React.FC = () => {
 
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 bg-white flex items-center justify-center lg:justify-start p-8 lg:p-16 xl:ml-20">
-        <div className="w-full max-w-md">
-          <div className="flex items-center justify-start gap-5 ">
-            {/* Back Arrow (only on signup) */}
+        <AnimatePresence mode="wait">
+          <div className="w-full max-w-md">
+            <div className="flex items-center justify-start gap-5 ">
+              {/* Back Arrow (only on signup) */}
 
-            {/* Heading */}
-            <div className="mb-8 relative">
-              {isSignup && (
-                <button
-                  onClick={() => setIsSignup(false)}
-                  className="mb-5 p-2 hover:bg-gray-100 rounded-lg transition-colors inline-flex md:absolute md:-left-15 md:top-1/2 md:-translate-y-1/2 cursor-pointer"
-                >
-                  <ArrowLeft size={24} className="text-gray-700" />
-                </button>
-              )}
-
-              <h1 className="text-4xl font-semibold text-gray-900 mb-2">
-                {isSignup ? "Start to Your Journey" : "Back to Your Journey"}
-              </h1>
-              <p className="text-gray-600">
-                {isSignup ? (
-                  <>Join thousands of professionals advancing their careers</>
-                ) : (
-                  <>
-                    Don&apos;t have an account?{" "}
-                    <button
-                      onClick={() => setIsSignup(true)}
-                      className="text-gray-900 font-medium cursor-pointer hover:underline"
-                    >
-                      Sign up
-                    </button>
-                  </>
+              {/* Heading */}
+              <div className="mb-8 relative">
+                {isSignup && (
+                  <button
+                    onClick={() => setIsSignup(false)}
+                    className="mb-5 p-2 hover:bg-gray-100 rounded-lg transition-colors inline-flex md:absolute md:-left-15 md:top-1/2 md:-translate-y-1/2 cursor-pointer"
+                  >
+                    <ArrowLeft size={24} className="text-gray-700" />
+                  </button>
                 )}
-              </p>
+                <div className="flex flex-col">
+                  {!isSignup && (
+                    <Image
+                      src={"/assets/logo_black.png"}
+                      alt="dark_logo"
+                      className="h-14 rounded-none mb-10 bg-transparent"
+                    />
+                  )}
+                  <h1 className="text-4xl font-semibold text-gray-900 mb-2">
+                    {isSignup
+                      ? "Start to Your Journey"
+                      : "Back to Your Journey"}
+                  </h1>
+                  <p className="text-gray-600">
+                    {isSignup ? (
+                      <>
+                        Join thousands of professionals advancing their careers
+                      </>
+                    ) : (
+                      <>
+                        Don&apos;t have an account?{" "}
+                        <button
+                          onClick={() => setIsSignup(true)}
+                          className="text-gray-900 font-medium cursor-pointer hover:underline"
+                        >
+                          Sign up
+                        </button>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Signup Form */}
-          <AnimatePresence mode="wait">
+            {/* Signup Form */}
+
             {isSignup ? (
               <motion.form
                 onSubmit={handleSignup}
@@ -575,8 +588,8 @@ const LoginPage: React.FC = () => {
                 </button>
               </motion.form>
             )}
-          </AnimatePresence>
-        </div>
+          </div>
+        </AnimatePresence>
       </div>
     </div>
   );

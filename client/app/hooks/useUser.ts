@@ -22,6 +22,11 @@ export function useUser() {
           credentials: "include",
         });
 
+        if (res.status === 429) {
+    alert("Whoa there! You're sending requests too fast.");
+    throw new Error("Rate limited");
+  }
+  
         if (!res.ok) {
           setUser(null);
           return;
