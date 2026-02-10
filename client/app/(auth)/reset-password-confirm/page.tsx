@@ -57,7 +57,8 @@ const ResetForm: React.FC = () => {
         } else {
           setError("This reset link has expired or is invalid");
         }
-      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_err: unknown) {
         setError("Failed to verify reset link");
       } finally {
         setVerifying(false);

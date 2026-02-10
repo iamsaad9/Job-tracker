@@ -3,23 +3,9 @@ import connectDB from "@/app/config/dbConfig";
 import Job from "@/app/models/Jobs";
 import { getServerSession } from "@/app/lib/auth";
 import "@/app/models/Documents";
-// Define the Session shape
-interface UserSession {
-  userId: string;
-  role?: string;
-}
 
-// Define the incoming Job body
-interface JobApplicationBody {
-  jobUrl: string;
-  company: string;
-  position: string;
-  status?: string;
-  applicationDate?: Date;
-  // Add other fields from your Job model
-}
 // GET all jobs for the logged-in user
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     await connectDB();
     

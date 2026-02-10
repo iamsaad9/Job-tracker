@@ -604,7 +604,7 @@ const SettingsPage: React.FC = () => {
                   color="danger"
                   variant="flat"
                   onPress={deleteModal.onOpen}
-                  className="md:flex-shrink-0"
+                  className="md:shrink-0"
                 >
                   Delete Account
                 </Button>
