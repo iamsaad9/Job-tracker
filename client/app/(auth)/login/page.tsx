@@ -588,6 +588,17 @@ const LoginPage: React.FC = () => {
                 </button>
               </motion.form>
             )}
+            <p className="text-center text-sm text-gray-600 mt-5 animate-fade-in delay-500">
+              Protected by reCAPTCHA and subject to the{" "}
+              <a
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-600 hover:text-purple-700 font-semibold"
+              >
+                Privacy Policy
+              </a>
+            </p>
           </div>
         </AnimatePresence>
       </div>

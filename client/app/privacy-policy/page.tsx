@@ -16,7 +16,6 @@ import {
   Trash2,
   AlertCircle,
 } from "lucide-react";
-import Link from "next/link";
 
 const PrivacyPolicyPage: React.FC = () => {
   const lastUpdated = "February 10, 2026";
@@ -29,7 +28,7 @@ const PrivacyPolicyPage: React.FC = () => {
       content: (
         <div className="space-y-4 text-foreground/80">
           <p>
-            Welcome to JobTracker. We respect your privacy and are committed to
+            Welcome to Trackee. We respect your privacy and are committed to
             protecting your personal data. This privacy policy will inform you
             about how we look after your personal data when you visit our
             website and use our services, and tell you about your privacy rights
@@ -584,7 +583,7 @@ const PrivacyPolicyPage: React.FC = () => {
               Posting the new Privacy Policy on this page
             </li>
             <li className="list-disc">
-              Updating the `&quot;Last Updated`&quot; date at the top of this
+              Updating the &quot;Last Updated&quot; date at the top of this
               policy
             </li>
             <li className="list-disc">
@@ -642,36 +641,16 @@ const PrivacyPolicyPage: React.FC = () => {
                   <div>
                     <p className="text-foreground/60 text-xs">Website</p>
                     <a
-                      href="https://jobtracker.com"
+                      href="https://trackee-project.vercel.app"
                       className="text-foreground font-medium hover:text-primary"
                     >
-                      www.jobtracker.com
+                      https://trackee-project.vercel.app
                     </a>
                   </div>
                 </div>
               </CardBody>
             </Card>
           </div>
-
-          <Card className="bg-foreground/5 border border-foreground/10">
-            <CardBody className="p-4">
-              <h5 className="font-semibold text-foreground mb-2">
-                Data Protection Officer
-              </h5>
-              <p className="text-foreground/80 text-sm">
-                For questions specifically about data protection and GDPR
-                compliance:
-                <br />
-                Email:{" "}
-                <a
-                  href="mailto:saad.masood8.sm@gmail.com"
-                  className="text-primary hover:underline"
-                >
-                  dpo@jobtracker.com
-                </a>
-              </p>
-            </CardBody>
-          </Card>
         </div>
       ),
     },
@@ -760,12 +739,12 @@ const PrivacyPolicyPage: React.FC = () => {
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-foreground/5 transition-colors"
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-foreground/5 transition-colors "
                 >
                   <span className="text-foreground/40 text-sm font-medium">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <span className="text-foreground hover:text-primary text-sm">
+                  <span className="text-foreground text-sm">
                     {section.title}
                   </span>
                 </a>
@@ -804,16 +783,6 @@ const PrivacyPolicyPage: React.FC = () => {
             This Privacy Policy is effective as of {lastUpdated} and will remain
             in effect except with respect to any changes in its provisions in
             the future.
-          </p>
-          <p className="mt-4">
-            Have questions? Visit our{" "}
-            <Link href="/help" className="text-primary hover:underline">
-              Help Center
-            </Link>{" "}
-            or{" "}
-            <Link href="/contact" className="text-primary hover:underline">
-              Contact Us
-            </Link>
           </p>
         </div>
       </div>

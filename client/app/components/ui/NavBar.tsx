@@ -122,7 +122,10 @@ export default function Header() {
             </DropdownItem>
 
             <DropdownItem key="help_and_feedback">
-              <Link className="text-foreground text-sm" href={"/help-feedback"}>
+              <Link
+                className="text-foreground text-sm h-full w-full"
+                href={"/help-feedback"}
+              >
                 Help & Feedback
               </Link>
             </DropdownItem>
