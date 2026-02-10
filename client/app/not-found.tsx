@@ -36,7 +36,7 @@ const NotFoundPage: React.FC = () => {
       icon: <HelpCircle size={20} />,
       title: "Help Center",
       description: "Get answers to your questions",
-      href: "/help",
+      href: "/help-feedback",
       color: "success",
     },
     {
