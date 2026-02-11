@@ -352,7 +352,7 @@ const LoginPage: React.FC = () => {
                           />
                         ))}
                       </div>
-                      <div className="space-y-1 text-xs text-foreground/70 mt-2 flex gap-5">
+                      <div className="space-y-1 text-xs text-foreground/70 mt-2 sm:flex gap-5">
                         <p
                           className={`flex items-center gap-2 ${
                             /[a-z]/.test(signUpData.password)
