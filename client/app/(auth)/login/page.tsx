@@ -25,7 +25,6 @@ const LoginPage: React.FC = () => {
     lastName: "",
     email: "",
     password: "",
-    agreedToTerms: false,
   });
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -66,16 +65,6 @@ const LoginPage: React.FC = () => {
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!signUpData.agreedToTerms) {
-      addToast({
-        title: "Error",
-        description: "Please agree to the Terms & Conditions",
-        color: "danger",
-        variant: "bordered",
-      });
-      return;
-    }
-
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -103,7 +92,6 @@ const LoginPage: React.FC = () => {
           lastName: "",
           email: "",
           password: "",
-          agreedToTerms: false,
         });
       } else {
         addToast({
